@@ -1,7 +1,7 @@
 {
 	"id": "workflow",
 	"name": "Workflow",
-	"version": "1.0.0",
+	"version": "1.0.4",
 	"minAppVersion": "0.15.0",
 	"description": "Workflow is an obsidian plugin that allows you to create and run connected LLM workflows. Each workflow consists of multiple tasks that run sequentially with different LLM Identities.",
 	"author": "Fauzaan Gasim",
