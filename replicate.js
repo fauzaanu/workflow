@@ -20,7 +20,7 @@ async function handleRequest(request) {
         temperature: 0.01,
         system_prompt: req.messages.filter(msg => msg.role === 'system')[0].content,
         max_new_tokens: -1,
-        prompt_template: "### System Prompt\n{system_prompt}\n### User Message\n{prompt}\n### Assistant\n",
+        prompt_template: '',
       }
     })
   };
