@@ -1,7 +1,5 @@
 import {
-	App,
-	Editor,
-	MarkdownView, Menu,
+	App, IconName, MarkdownView, Menu,
 	Modal,
 	Notice,
 	Plugin,
@@ -11,60 +9,219 @@ import {
 } from 'obsidian';
 import {requestUrl, RequestUrlParam} from 'obsidian';
 
+type TaskMode = 'append' | 'replace';
+
+/**
+ * Represents a provider that can be used to fetch data from an API.
+ * @interface Provider
+ */
+interface Provider {
+	name: string;
+	model: string;
+	apiKey: string;
+	endpoint: string;
+	jsonPath: string;
+}
+
+/**
+ * Represents a workflow task.
+ *
+ * @interface
+ */
+interface WorkflowTask {
+	name: string;
+	provider: Provider;
+	temperature: number;
+	frequencyPenalty: number;
+	maxTokens: number;
+	prompt: string;
+	systemPrompt: string;
+	mode: TaskMode;
+}
+
+/**
+ * Represents a workflow that needs to be executed.
+ *
+ * @interface
+ */
+interface Workflow {
+	workflowName: string;
+	workflowIcon: IconName;
+	tasks: WorkflowTask[];
+	objective: string; // inject the objective into the system propmpt so that the LLM knows what the end goal is
+}
+
+/**
+ * Represents the settings for PpxObsidian.
+ * @interface
+ */
 interface PpxObsidianSettings {
-	ppxKey: string;
 	openaiKey: string;
+	ppxKey: string;
+	workflows: Workflow[];
+	providers: Provider[];
 }
 
+/**
+ * The default settings for PpxObsidian.
+ *
+ * @typedef {Object} DEFAULT_SETTINGS
+ * @property {string} openaiKey - The OpenAI API key.
+ * @property {string} ppxKey - The Ppx API key.
+ * @property {Array<Object>} workflows - An array of workflows.
+ * @property {Array<Object>} providers - An array of providers.
+ */
 const DEFAULT_SETTINGS: PpxObsidianSettings = {
-	ppxKey: 'you_perplexity_api_key_here',
-	openaiKey: 'you_openai_api_key_here',
+	openaiKey: '',
+	ppxKey: '',
+	workflows: [],
+	providers: [],
 }
 
-async function call_perplexity_api(messages: object, ppxKey: string) {
+/**
+ * Generates a unique task name by combining a randomly generated unique ID and a randomly selected element name from the periodic table.
+ *
+ * @returns {string} The unique task name.
+ */
+function generateUniqueName(append: string): string {
+	const periodicTableElements = [
+		"Hydrogen",
+		"Helium",
+		"Lithium",
+		"Beryllium",
+		"Boron",
+		"Carbon",
+		"Nitrogen",
+		"Oxygen",
+		"Fluorine",
+		"Neon",
+		"Sodium",
+		"Magnesium",
+		"Aluminum",
+		"Silicon",
+		"Phosphorus",
+		"Sulfur",
+		"Chlorine",
+		"Argon",
+		"Potassium",
+		"Calcium",
+		"Scandium",
+		"Titanium",
+		"Vanadium",
+		"Chromium",
+		"Manganese",
+		"Iron",
+		"Cobalt",
+		"Nickel",
+		"Copper",
+		"Zinc",
+		"Gallium",
+		"Germanium",
+		"Arsenic",
+		"Selenium",
+		"Bromine",
+		"Krypton",
+		"Rubidium",
+		"Strontium",
+		"Yttrium",
+		"Zirconium",
+		"Niobium",
+		"Molybdenum",
+		"Technetium",
+		"Ruthenium",
+		"Rhodium",
+		"Palladium",
+		"Silver",
+		"Cadmium",
+		"Indium",
+		"Tin",
+		"Antimony",
+		"Tellurium",
+		"Iodine",
+		"Xenon",
+		"Cesium",
+		"Barium",
+		"Lanthanum",
+		"Cerium",
+		"Praseodymium",
+		"Neodymium",
+		"Promethium",
+		"Samarium",
+		"Europium",
+		"Gadolinium",
+		"Terbium",
+		"Dysprosium",
+		"Holmium",
+		"Erbium",
+		"Thulium",
+		"Ytterbium",
+		"Lutetium",
+		"Hafnium",
+		"Tantalum",
+		"Tungsten",
+		"Rhenium",
+		"Osmium",
+		"Iridium",
+		"Platinum",
+		"Gold",
+		"Mercury",
+		"Thallium",
+		"Lead",
+		"Bismuth",
+		"Polonium",
+		"Astatine",
+		"Radon",
+		"Francium",
+		"Radium",
+		"Actinium",
+		"Thorium",
+		"Protactinium",
+		"Uranium",
+		"Neptunium",
+		"Plutonium",
+		"Americium",
+		"Curium",
+		"Berkelium",
+		"Californium",
+		"Einsteinium"
+	];
+	const uniqueid = Math.floor(Math.random() * 1000);
+	const randomElement = Math.floor(Math.random() * 99);
+	const elementName = periodicTableElements[randomElement];
+	return `${append}-${uniqueid}-${elementName}`;
+}
+
+
+/**
+ * Makes a request to a provider using the given messages and provider information.
+ *
+ * @param {Provider} provider - The provider information.
+ * @param workflowTask
+ * @param workflow
+ * @returns {Promise<string>} A promise that resolves with the content of the first choice of the response, or rejects with an error message.
+ */
+async function call_provider(notes:string, provider: Provider, workflowTask: WorkflowTask, workflow: Workflow): Promise<string> {
 	const options: RequestUrlParam = {
 		method: 'POST',
-		url: 'https://api.perplexity.ai/chat/completions',
+		url: provider.endpoint,
 		headers: {
 			'accept': 'application/json',
 			'content-type': 'application/json',
-			'authorization': `Bearer ${ppxKey}`,
+			'authorization': `Bearer ${provider.apiKey}`,
 		},
 		body: JSON.stringify({
-			model: 'pplx-7b-online',
-			messages: messages,
-			temperature: 0,
-			presence_penalty: 2.0,
-		})
-	};
-
-	try {
-		const response: RequestUrlResponse = await requestUrl(options);
-		const responseData = response.json; // Directly accessing the json property
-		new Notice('Response from Perplexity API: ' + JSON.stringify(responseData));
-		return responseData.choices[0].message.content;
-	} catch (error) {
-		let errorMessage = 'An error occurred: ' + error;
-		new Notice(errorMessage);
-		return errorMessage;
-	}
-}
-
-
-async function call_openai_api(messages: Object, openaiKey: string) {
-	const options: RequestUrlParam = {
-		method: 'POST',
-		url: 'https://api.openai.com/v1/chat/completions',
-		headers: {
-			'accept': 'application/json',
-			'content-type': 'application/json',
-			'authorization': `Bearer ${openaiKey}`,
-		},
-		body: JSON.stringify({
-			model: 'gpt-3.5-turbo',
-			messages: messages,
-			temperature: 0,
-			presence_penalty: 2.0,
+			model: provider.model,
+			messages: [
+				{role: 'system', content: workflowTask.systemPrompt},
+				{
+					role: 'system',
+					content: "Make sure your answer helps in achiving the following objective" + workflow.objective
+				},
+				{role: 'user', content: workflowTask.prompt + "current notes:"+notes},
+			],
+			temperature: workflowTask.temperature,
+			presence_penalty: workflowTask.frequencyPenalty,
+			max_tokens: workflowTask.maxTokens,
 		})
 	};
 
@@ -80,392 +237,567 @@ async function call_openai_api(messages: Object, openaiKey: string) {
 	}
 }
 
+function generateRandomIcon() {
+	// generate a random icon
+	const icons = [
+		'book-a',
+		'book-audio',
+		'book-open',
+		'book-copy',
+		'book-dashed',
+		'pen-line',
+		'library-big',
+		'message-circle-more',
+	]
+	const randomIcon = Math.floor(Math.random() * 8);
+	return icons[randomIcon];
+}
 
-export default class PpxObsidian extends Plugin {
+/**
+ * A class representing the Workflow Setting Tab.
+ * @extends PluginSettingTab
+ */
+class WorkflowSettingTab
+	extends PluginSettingTab {
+	plugin: PpxObsidian;  // Replace "MyPlugin" with the name of your plugin class
+
+	constructor(app: App, plugin: PpxObsidian) {
+		super(app, plugin);
+		this.plugin = plugin;
+		this.refresh();  // call refresh instead of display
+	}
+
+	refresh() {
+		this.containerEl.empty();  // Clear the UI
+		this.display();  // Generate the UI again
+	}
+
+	display(): void {
+		const {containerEl} = this;
+
+		// Here you can add your dynamic content as explained in the previous response
+		// this.plugin.settings will give you access to your plugin's settings
+		containerEl.empty(); // Clear the settings container
+		containerEl.createEl('h1', {text: 'API Providers'});
+		// list all providers as labels, name, model,temperature, frequency penalty, max tokens
+		let providersDiv = containerEl.createEl('div');
+		let amountOfProviders = this.plugin.settings.providers.length;
+
+		providersDiv.createEl('p', {text: `Amount of Providers: ${amountOfProviders}`});
+
+		// button to edit / view providers
+		new Setting(containerEl)
+			.setName('Edit / View Providers')
+			.addButton(button => button
+				.setButtonText('Edit')
+				.onClick(() => {
+					let modal = new ProvidersModal(this.app, this.plugin.settings.providers[0], this.plugin);
+					modal.open();
+				}));
+
+
+		containerEl.createEl('h1', {text: 'Workflows'});
+		// button to add a new workflow
+		new Setting(containerEl)
+			.setName('Add Workflow')
+			.addButton(button => button
+				.setButtonText('Add')
+				.onClick(() => {
+					// create a new workflow
+					let workflow: Workflow = {
+						workflowName: generateUniqueName("WF"),
+						objective: 'objective_here',
+						workflowIcon: generateRandomIcon(),
+						tasks: [],
+					};
+					this.plugin.settings.workflows.push(workflow);
+					// Come back to the same scroll position
+					let scrollPosition = containerEl.scrollTop;
+					this.display();
+					containerEl.scrollTop = scrollPosition;
+					// Save settings
+					this.plugin.saveSettings().then(r => {
+						this.refresh();
+					});
+				}));
+
+		this.plugin.settings.workflows.forEach((workflow, index) => {
+			let workflowDiv = containerEl.createEl('div');
+
+			// add a heading for the workflow
+			workflowDiv.createEl('h3', {text: workflow.workflowName});
+			workflowDiv.createEl('p', {text: `Objective: ${workflow.objective}`});
+			if (workflow.tasks.length > 0) {
+				workflowDiv.createEl('p', {text: `Tasks: ${workflow.tasks.length}`});
+				workflowDiv.createEl('p', {text: `Providers: ${workflow.tasks.map(task => task.provider.name).join(', ')}`});
+			}
+
+			new Setting(workflowDiv)
+				.addButton(button => button
+					.setButtonText('Edit / View Workflow')
+					.onClick(() => {
+						let modal = new WorkflowModal(this.app, workflow, this.plugin);
+						modal.open();
+						this.plugin.saveSettings().then(r => {
+							this.refresh();
+						});
+					}))
+				.addButton(button => button
+					.setButtonText('Delete Workflow')
+					.setWarning()
+					.setIcon('trash')
+					.onClick(() => {
+						// remove the workflow from the settings
+						this.plugin.settings.workflows = this.plugin.settings.workflows.filter(w => w.workflowName !== workflow.workflowName);
+						let scrollPosition = containerEl.scrollTop;
+						this.display();
+						// come back to scroll position
+						containerEl.scrollTop = scrollPosition;
+						this.plugin.saveSettings().then(r => {
+							this.refresh();
+						});
+					}));
+		});
+	}
+}
+
+/**
+ * Represents a modal for managing API providers.
+ */
+class ProvidersModal extends Modal {
+	provider: Provider;
+	plugin: PpxObsidian;
+
+	constructor(app: App, provider: Provider, plugin: PpxObsidian) {
+		super(app);
+		this.provider = provider;
+		this.plugin = plugin;
+	}
+
+	onOpen() {
+		let {contentEl} = this;
+		// Set the title
+		contentEl.createEl('h1', {text: `API Providers`});
+
+		// button to add a new provider
+		new Setting(contentEl)
+			.setName('Add Provider')
+			.addButton(button => button
+				.setButtonText('Add')
+				.onClick(() => {
+					// create a new provider
+					let provider: Provider = {
+						name: 'New Provider',
+						model: 'model_here',
+						apiKey: 'api_key_here',
+						endpoint: 'https://api.openai.com/v1/chat/completions',
+						jsonPath: 'choices[0].message.content',
+					};
+					this.plugin.settings.providers.push(provider);
+					// Save settings
+					this.plugin.saveSettings().then(r => {
+						this.close();
+						this.open();
+						this.plugin.settingsTab.refresh();
+					});
+				}));
+
+		// display all providers from the provider object
+		for (let provider of this.plugin.settings.providers) {
+			let providerDiv = contentEl.createEl('div');
+
+			// add a heading for the provider
+			providerDiv.createEl('h3', {text: provider.name});
+
+			new Setting(providerDiv)
+				.setName('Provider Name')
+				.addText(textInput => textInput
+					.setPlaceholder('Enter your provider name')
+					.setValue(provider.name)
+					.onChange(async value => {
+						provider.name = value;
+						await this.plugin.saveSettings();
+						this.plugin.settingsTab.refresh();
+					}));
+
+			new Setting(providerDiv)
+				.setName('Model')
+				.addText(textInput => textInput
+					.setPlaceholder('Enter your model')
+					.setValue(provider.model)
+					.onChange(async value => {
+						provider.model = value;
+						// Save settings
+						await this.plugin.saveSettings();
+						this.plugin.settingsTab.refresh();
+					}));
+
+			new Setting(providerDiv)
+				.setName('API Key')
+				.addText(textInput => textInput
+					.setPlaceholder('Enter your API Key')
+					.setValue(provider.apiKey)
+					.onChange(async value => {
+						provider.apiKey = value;
+						// Save settings
+						await this.plugin.saveSettings();
+						this.plugin.settingsTab.refresh();
+					}));
+
+			new Setting(providerDiv)
+				.setName('Endpoint')
+				.addText(textInput => textInput
+					.setPlaceholder('Enter your endpoint')
+					.setValue(provider.endpoint)
+					.onChange(async value => {
+						provider.endpoint = value;
+						await this.plugin.saveSettings();
+						this.plugin.settingsTab.refresh();
+					}));
+
+			new Setting(providerDiv)
+				.setName('JSON Path')
+				.addText(textInput => textInput
+					.setPlaceholder('Enter your JSON Path')
+					.setValue(provider.jsonPath)
+					.onChange(async value => {
+						provider.jsonPath = value;
+						await this.plugin.saveSettings();
+						this.plugin.settingsTab.refresh();
+					}));
+
+			// Add a button to delete the provider
+			new Setting(providerDiv)
+				.setName(`Delete Provider`)
+				.addButton(button => button
+					.setWarning()
+					.setIcon('trash')
+					.setButtonText('Delete')
+					.onClick(() => {
+						// remove the provider from the settings
+						this.plugin.settings.providers = this.plugin.settings.providers.filter(p => p.name !== provider.name);
+						// Save settings
+						this.plugin.saveSettings().then(r => {
+							this.close();
+							this.open();
+							this.plugin.settingsTab.refresh();
+						});
+					}));
+
+
+		}
+
+
+	}
+
+	onClose() {
+		let {contentEl} = this;
+		contentEl.empty();
+		super.onClose();
+		this.plugin.refreshSettingsTab();
+	}
+}
+
+
+/**
+ * Represents a modal for editing a workflow.
+ * @extends Modal
+ */
+class WorkflowModal extends Modal {
+	workflow: Workflow;
+	plugin: PpxObsidian;
+
+	constructor(app: App, workflow: Workflow, plugin: PpxObsidian) {
+		super(app);
+		this.workflow = workflow;
+		this.plugin = plugin;
+	}
+
+	onOpen() {
+		let {contentEl} = this;
+		// Set the title of the Modal to the workflow name
+		contentEl.createEl('h2', {text: `Edit Workflow: ${this.workflow.workflowName}`});
+
+		// edit all the workflow properties
+		new Setting(contentEl)
+			.setName('Workflow Name')
+			.addTextArea(textArea => {
+				textArea
+					.setPlaceholder('Enter your workflow name')
+					.setValue(this.workflow.workflowName)
+					.onChange(async value => {
+						this.workflow.workflowName = value;
+					});
+				textArea.inputEl.style.height = '100%';  // Set textarea height to 100%
+				textArea.inputEl.style.width = '100%';  // Set textarea width to 100%
+			});
+
+		// edit workflow object
+		new Setting(contentEl)
+			.setName('Objective')
+			.addTextArea(textArea => {
+				textArea
+					.setPlaceholder('Enter your workflow objective')
+					.setValue(this.workflow.objective)
+					.onChange(async value => {
+						this.workflow.objective = value;
+					});
+				textArea.inputEl.style.height = '100%';  // Set textarea height to 100%
+				textArea.inputEl.style.width = '100%';  // Set textarea width to 100%
+			});
+
+		// add a button to add a new task
+		new Setting(contentEl)
+			.setName(`Add Task`)
+			.addButton(button => button
+				.setButtonText('Add Task')
+				.onClick(() => {
+					// create a new task
+					let task: WorkflowTask = {
+						name: generateUniqueName("TSK"),
+						prompt: 'prompt_here',
+						mode: 'append',
+						systemPrompt: 'system_prompt_here',
+						// for the provider grab the first provider in the list
+						provider: this.plugin.settings.providers[0],
+						temperature: 0,
+						frequencyPenalty: 2.0,
+						maxTokens: 0,
+					};
+					this.workflow.tasks.push(task);
+					// Refresh the display to include the new task edit fields
+					this.plugin.saveSettings().then(r => {
+						this.close();
+						this.open();
+					});
+				}));
+
+
+		// edit tasks
+		this.workflow.tasks.forEach((task, index) => {
+			// add a heading for the task
+			contentEl.createEl('h3', {text: task.name});
+
+			new Setting(contentEl)
+				.setName('Task Name')
+				.addTextArea(textArea => {
+					textArea
+						.setPlaceholder('Enter your task name')
+						.setValue(task.name)
+						.onChange(async value => {
+							task.name = value;
+						});
+					textArea.inputEl.style.height = '100%';  // Set textarea height to 100%
+					textArea.inputEl.style.width = '100%';  // Set textarea width to 100%
+				});
+
+			new Setting(contentEl)
+				.setName('Prompt')
+				.addTextArea(textArea => {
+					textArea
+						.setPlaceholder('Enter your task prompt')
+						.setValue(task.prompt)
+						.onChange(async value => {
+							task.prompt = value;
+						});
+					textArea.inputEl.style.height = '100%';  // Set textarea height to 100%
+					textArea.inputEl.style.width = '100%';  // Set textarea width to 100%
+				});
+
+			new Setting(contentEl)
+				.setName('System Prompt')
+				.addTextArea(textArea => {
+					textArea
+						.setPlaceholder('Enter your task system prompt')
+						.setValue(task.systemPrompt)
+						.onChange(async value => {
+							task.systemPrompt = value;
+						});
+					textArea.inputEl.style.height = '100%';  // Set textarea height to 100%
+					textArea.inputEl.style.width = '100%';  // Set textarea width to 100%
+				});
+
+
+			new Setting(contentEl)
+				.setName('Provider')
+				.addDropdown(dropdown => {
+					// Dynamically add each provider to the dropdown
+					const providerOptions: Record<string, string> = {}
+					this.plugin.settings.providers.forEach(provider => {
+						providerOptions[provider.name] = provider.name;
+					});
+					dropdown.addOptions(providerOptions)
+					dropdown.setValue(task.provider.name) // Use provider name as the value since our options keys are provider names
+						.onChange(async value => {
+							const selectedProvider = this.plugin.settings.providers.find(provider => provider.name === value);
+							if (selectedProvider) { // Check if provider was found
+								task.provider = selectedProvider;
+							}
+						});
+				});
+
+			new Setting(contentEl)
+				.setName('Mode')
+				.addDropdown(dropdown => {
+					dropdown.addOption('append', 'Append');
+					dropdown.addOption('replace', 'Replace');
+					dropdown.setValue(task.mode)
+						.onChange(async value => {
+							task.mode = value as TaskMode;
+						});
+				});
+
+			new Setting(contentEl)
+				.setName('Temperature')
+				.addText(textInput => textInput
+					.setPlaceholder('Enter your temperature')
+					.setValue(task.temperature.toString())
+					.onChange(async value => {
+						task.temperature = Number(value);
+					}));
+
+
+			new Setting(contentEl)
+				.setName('Frequency Penalty')
+				.addText(textInput => textInput
+					.setPlaceholder('Enter your frequency penalty')
+					.setValue(task.frequencyPenalty.toString())
+					.onChange(async value => {
+						task.frequencyPenalty = Number(value);
+					}));
+
+			new Setting(contentEl)
+				.setName('Max Tokens')
+				.addText(textInput => textInput
+					.setPlaceholder('Enter your max tokens')
+					.setValue(task.maxTokens.toString())
+					.onChange(async value => {
+						task.maxTokens = Number(value);
+					}));
+
+
+			// add delete task button
+			new Setting(contentEl)
+				.setName(`Delete Task`)
+				.addButton(button => button
+					.setButtonText('Delete')
+					.setWarning()
+					.setIcon('trash')
+					.onClick(() => {
+						// remove the task from the workflow
+						this.workflow.tasks = this.workflow.tasks.filter(t => t.name !== task.name);
+						// Refresh the display to remove the deleted task
+						// Save settings
+						this.plugin.saveSettings().then(r => {
+							this.close();
+							this.open();
+						});
+					}));
+		});
+
+	}
+
+	onClose() {
+		let {contentEl} = this;
+		contentEl.empty();
+		super.onClose();
+		this.plugin.refreshSettingsTab();
+	}
+}
+
+/**
+ * Represents the PpxObsidian plugin.
+ * @extends Plugin
+ */
+export default class PpxObsidian
+	extends Plugin {
 	settings: PpxObsidianSettings;
+	settingsTab: WorkflowSettingTab;
 
+
+	refreshSettingsTab() {
+		if (this.settingsTab) {
+			this.settingsTab.refresh();
+		}
+	}
 
 	async onload() {
 		await this.loadSettings();
-		// This creates an icon in the left ribbon.
-		const ribbonIconEl = this.addRibbonIcon('microscope', 'Research Current Note', (evt: MouseEvent) => {
 
-			// grab the current note
-			const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+		// grab the current note
+		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
 
-			function betterText(text: string, original: Boolean): string {
-
-				if (original) return text;
-
-				if (text.length > 4000) {
-					new Notice("Text too long, last 4000 characters will be used")
-					text = text.substring(text.length - 4000);
-					// find the first line break
-					try {
-						let index = text.indexOf('\n');
-						// start from the next line
-						text = text.substring(index + 1);
-						return text;
-					} catch (err) {
-						new Notice("No line breaks found, using entire text")
-						return text;
-					}
-				}
-				return text;
-			}
-
-			// create a file menu
-			let fileMenu = new Menu();
-			fileMenu.addItem((item) => {
-				item.setTitle('Research Current Note');
-				item.setIcon('dice');
-				item.onClick(() => {
-					new Notice('Researching Current Note');
-					// grab the entire text
-					if (view) {
-
-						let entireText = view.editor.getValue();
-						entireText = betterText(entireText, true);
+		// add the workflow settings tab
+		this.settingsTab = new WorkflowSettingTab(this.app, this);
+		this.addSettingTab(this.settingsTab);
 
 
-						// extract key points from the current note : openai
-						const keypoints = [
-							{
-								role: 'system',
-								content: 'You are a professional research assistant that can extract key points from a note. Keep your responses as the following:-[KEYPOINT]-[KEYPOINT]'
-							},
-							{role: 'user', content: "extract key points from the following text:" + entireText},
-						]
+		// create a ribbon icon and add a menu item to the ribbon icon per workflow
+		this.addRibbonIcon('book', 'Run Workflow', (evt: MouseEvent) => {
+			// create a file menu on the ribbon icon
+			const fileMenu = new Menu();
+			// add a menu item for each workflow
+			this.settings.workflows.forEach(workflow => {
+				fileMenu.addItem(item => {
+					item.setTitle(workflow.workflowName);
+					item.setIcon(workflow.workflowIcon);
+					item.onClick(() => {
+						// run each task one by one
+						const workflowTasks = workflow.tasks;
 
-						call_openai_api(keypoints, this.settings.openaiKey).then(
-							(response) => {
-								// add the response to the next line
-								let editor = view.editor;
-
-								// Insert the response at the current cursor position
-								editor.setCursor(editor.lineCount(), 0);
-								editor.replaceSelection('\n\n## Key Points \n\n' + response);
-								new Notice("Processed response from OpenAI API")
-
-								// create questions from the key points : openai
-								entireText = betterText(entireText, false);
-								const questions = [
-									{
-										role: 'system',
-										content: 'You are a professional research assistant that can create questions from key points. Keep your responses as the following:-[QUESTION]-[QUESTION]'
-									},
-									{
-										role: 'user',
-										content: "create questions from the following key points:" + entireText
-									},
-								]
-								call_openai_api(questions, this.settings.openaiKey).then(
-									(response) => {
-										// add the response to the next line
-										let editor = view.editor;
-
-										// Insert the response at the current cursor position
-										editor.setCursor(editor.lineCount(), 0);
-										editor.replaceSelection('\n\n## Questions \n\n' + response);
-										new Notice("Processed response from OpenAI API")
-
-										// create a summary from the whole text : openai
-										entireText = betterText(entireText, false);
-										const summary = [
-											{
-												role: 'system',
-												content: 'You are a professional research assistant that can create a summary while expanding on the topics discussed from a note.'
-											},
-											{role: 'user', content: "Here are my current notes" + entireText},
-										]
-										call_openai_api(summary, this.settings.openaiKey).then(
-											(response) => {
-												// add the response to the next line
-												let editor = view.editor;
-
-												// Insert the response at the current cursor position
-												editor.setCursor(editor.lineCount(), 0);
-												editor.replaceSelection('\n\n## Summary \n\n' + response);
-												new Notice("Processed response from OpenAI API")
-
-												// call perplexity api
-												entireText = betterText(entireText, false);
-												const messages = [
-													{
-														role: 'system',
-														content: 'You are a professional research assistant that can create a summary from a note.'
-													},
-													{
-														role: 'user',
-														content: "Correct me, help me learn more about the following:" + entireText
-													},
-												]
-
-												new Notice("Sending request to Perplexity API")
-												call_perplexity_api(messages, this.settings.ppxKey).then(
-													(response) => {
-														// add the response to the next line
-														let editor = view.editor;
-
-														// Insert the response at the current cursor position
-														editor.setCursor(editor.lineCount(), 0);
-														editor.replaceSelection('\n\n## Perplexity - Realtime Info \n\n' + response);
-														new Notice("Processed response from Perplexity API")
-
-														// create #tags from the whole text : openai
-														// like cornell notes
-														entireText = betterText(entireText, false);
-														const tags = [
-															{
-																role: 'system',
-																content: 'You are a professional research assistant that can create #tags from a note. These should be the most important single word keywords of the notes. This is for the end of the notes following the rules of cornell note taking system. Keep your responses as the following:#TAG #TAG #TAG'
-															},
-															{
-																role: 'user',
-																content: "create single word #tags from the following text from most important keywords:" + entireText
-															},
-														]
-														call_openai_api(tags, this.settings.openaiKey).then(
-															(response) => {
-																// add the response to the next line
-																let editor = view.editor;
-
-																// Insert the response at the current cursor position
-																editor.setCursor(editor.lineCount(), 0);
-
-																// taggify the response so that obsidian can recognize it as a tag
-																// no spaces, no special characters, _ between words
-																response = response.replaceAll(" ", "_");
-																response = response.replaceAll(",", "");
-																response = response.replaceAll(".", "");
-																response = response.replaceAll("?", "");
-																response = response.replaceAll("!", "");
-																response = response.replaceAll(":", "");
-																response = response.replaceAll(";", "");
-																response = response.replaceAll("-", "");
-																response = response.replaceAll("(", "");
-																response = response.replaceAll(")", "");
-																response = response.replaceAll("[", "");
-																response = response.replaceAll("]", "");
-																response = response.replaceAll("{", "");
-																response = response.replaceAll("}", "");
-																response = response.replaceAll("/", "");
-																response = response.replaceAll("\\", "");
-																response = response.replaceAll("\"", "");
-																response = response.replaceAll("\'", "");
-																response = response.replaceAll("`", "");
-																response = response.replaceAll("~", "");
-																response = response.replaceAll("<", "");
-																response = response.replaceAll(">", "");
-																response = response.replaceAll("|", "");
-																response = response.replaceAll("=", "");
-																response = response.replaceAll("+", "");
-																response = response.replaceAll("*", "");
-																response = response.replaceAll("&", "");
-																response = response.replaceAll("%", "");
-																response = response.replaceAll("$", "");
-																response = response.replaceAll("@", "");
-																response = response.replaceAll("^", "");
-																response = response.replaceAll("#", "\n#");
-																response = response.replaceAll("_\n", "\n");
+						function runTask(task: WorkflowTask) {
+							// create a new message object
+							let message = {
+								id: generateUniqueName("MSG"),
+								type: 'text',
+								content: task.prompt,
+							};
 
 
-																editor.replaceSelection('\n\n### Key words \n\n' + response);
-																new Notice("Processed response from OpenAI API")
-
-																// change the title of the note to something more meaningful
-																const title_gen = [
-																	{
-																		role: 'system',
-																		content: 'You are a professional research assistant that can generate a title for a note. Keep your responses as the following:-[TITLE]'
-																	},
-																	{
-																		role: 'user',
-																		content: "generate a title for the following text:" + entireText
-																	},
-																]
-																call_openai_api(title_gen, this.settings.openaiKey).then(
-																	(response) => {
-																		// change title
-																		let editor = view.editor;
-																		let file = view.file?.name;
-
-																		// Insert the response as the title
-																		file = response + ".md";
-
-
-																		new Notice("Processed response from OpenAI API")
-																	}
-																).catch(err => {
-																	console.error(err);  // If an error occurs, log it to console
-																	new Notice('An error occurred: ' + err.message); // And also display a notice about it
-																});
-															}
-														).catch(err => {
-															console.error(err);  // If an error occurs, log it to console
-															new Notice('An error occurred: ' + err.message); // And also display a notice about it
-														});
-													}
-												).catch(err => {
-													console.error(err);  // If an error occurs, log it to console
-													new Notice('An error occurred: ' + err.message); // And also display a notice about it
-												});
-											}
-										).catch(err => {
-											console.error(err);  // If an error occurs, log it to console
-											new Notice('An error occurred: ' + err.message); // And also display a notice about it
-										});
+							if (view) {
+								// call the provider
+								call_provider(
+									view.editor.getValue(),
+									task.provider,
+									task,
+									workflow
+								).then(response => {
+									// append the response to the note
+									if (view) {
+										let entireText = view.editor.getValue();
+										if (task.mode === 'append') {
+											view.editor.setCursor({line: Infinity, ch: Infinity});
+											view.editor.replaceSelection('\n' + response);
+											new Notice(`Task ${task.name} completed.`);
+											// RECURSIVE CALL
+											// run the next task
+											if (workflowTasks.indexOf(task) < workflowTasks.length - 1)
+												runTask(workflowTasks[workflowTasks.indexOf(task) + 1]);
+										} else if (task.mode === 'replace') {
+											view.editor.setValue(response);
+											if (workflowTasks.indexOf(task) < workflowTasks.length - 1)
+												runTask(workflowTasks[workflowTasks.indexOf(task) + 1]);
+											new Notice(`Task ${task.name} completed.`);
+										}
 									}
-								).catch(err => {
-									console.error(err);  // If an error occurs, log it to console
-									new Notice('An error occurred: ' + err.message); // And also display a notice about it
 								});
+							} else {
+								new Notice('No active note found.');
 							}
-						).catch(err => {
-							console.error(err);  // If an error occurs, log it to console
-							new Notice('An error occurred: ' + err.message); // And also display a notice about it
-						});
 
+						}
 
-					}
+						// run the tasks
+						runTask(workflowTasks[0]);
+						new Notice(`Workflow ${workflow.workflowName} completed.`)
+					});
 				});
 			});
 
-			fileMenu.addItem((item) => {
-				item.setTitle('Summarize Current Note');
-				item.setIcon('dice');
-				item.onClick(() => {
-					new Notice('Summarizing Current Note');
-					if (view) {
-						let entireText = view.editor.getValue();
-						entireText = betterText(entireText, true);
-
-
-						// extract key points from the current note : openai
-						const keypoints = [
-							{
-								role: 'system',
-								content: 'Summarize the following text while expanding on the topics discussed. Retain the important information and include a section for key takeaways. Format in markdown.'
-							},
-							{role: 'user', content: "Summarize the following text:" + entireText},
-						]
-
-						call_openai_api(keypoints, this.settings.openaiKey).then(
-							(response) => {
-								// add the response to the next line
-								let editor = view.editor;
-
-								// Insert the response at the current cursor position
-								editor.setCursor(editor.lineCount(), 0);
-								editor.replaceSelection('\n\n## Key Points \n\n' + response);
-
-							}
-						).catch(err => {
-							console.error(err);  // If an error occurs, log it to console
-							new Notice('An error occurred: ' + err.message); // And also display a notice about it
-						});
-					}
-
-				});
-
-				// Menu appears on right click on the ribbon item
-				fileMenu.showAtPosition({x: evt.pageX, y: evt.pageY});
-			});
-
-			fileMenu.addItem((item) => {
-				item.setTitle('Re-write Current Note');
-				item.setIcon('dice');
-				item.onClick(() => {
-					new Notice('Summarizing Current Note');
-					if (view) {
-						let entireText = view.editor.getValue();
-						entireText = betterText(entireText, true);
-
-
-						// extract key points from the current note : openai
-						const keypoints = [
-							{
-								role: 'system',
-								content: 'You are an expert re-writer and researcher.'
-							},
-							{
-								role: 'user',
-								content: 'Compose concise and well-organized notes in the first person, as if these are my own. Prioritize clarity, coherence, and maintain a professional tone. Retain essential details, eliminate redundancies, and ensure the notes accurately convey the original meaning. Organize the content logically for optimal readability. Additionally, simplify any complex concepts to make them easy for anyone to understand.' + entireText
-							},
-						];
-
-
-						call_openai_api(keypoints, this.settings.openaiKey).then(
-							(response) => {
-								// add the response to the next line
-								let editor = view.editor;
-
-								// replace the entire text with the response
-								editor.setValue(response);
-
-							}
-						).catch(err => {
-							console.error(err);  // If an error occurs, log it to console
-							new Notice('An error occurred: ' + err.message); // And also display a notice about it
-						});
-					}
-
-				});
-
-				// Menu appears on right click on the ribbon item
-				fileMenu.showAtPosition({x: evt.pageX, y: evt.pageY});
-			});
-
-
+			// add the file menu to the ribbon icon
+			fileMenu.showAtPosition({x: evt.clientX, y: evt.clientY});
 		});
 
-
-		// Perform additional things with the ribbon
-		ribbonIconEl.addClass('my-plugin-ribbon-class');
-
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status Bar Text');
-
-		// This adds a simple command that can be triggered anywhere
-		this.addCommand({
-			id: 'open-sample-modal-simple',
-			name: 'Open sample modal (simple)',
-			callback: () => {
-				new SampleModal(this.app).open();
-			}
-		});
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: 'sample-editor-command',
-			name: 'Sample editor command',
-			editorCallback: (editor: Editor, view: MarkdownView) => {
-				console.log(editor.getSelection());
-				editor.replaceSelection('Sample Editor Command');
-			}
-		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: 'open-sample-modal-complex',
-			name: 'Open sample modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new SampleModal(this.app).open();
-					}
-
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
-				}
-			}
-		});
-
-		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
 
 		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
 		// Using this function will automatically remove the event listener when this plugin is disabled.
@@ -481,7 +813,6 @@ export default class PpxObsidian extends Plugin {
 
 	}
 
-
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
 	}
@@ -490,59 +821,3 @@ export default class PpxObsidian extends Plugin {
 		await this.saveData(this.settings);
 	}
 }
-
-class SampleModal
-	extends Modal {
-	constructor(app: App) {
-		super(app);
-	}
-
-	onOpen() {
-		const {contentEl} = this;
-		contentEl.setText('Woah!');
-	}
-
-	onClose() {
-		const {contentEl} = this;
-		contentEl.empty();
-	}
-}
-
-class SampleSettingTab extends PluginSettingTab {
-	plugin: PpxObsidian;
-
-	constructor(app: App, plugin: PpxObsidian) {
-		super(app, plugin);
-		this.plugin = plugin;
-	}
-
-	display(): void {
-		const {containerEl} = this;
-
-		containerEl.empty();
-
-		new Setting(containerEl)
-			.setName('Perplexity API Key')
-			.setDesc('API Key from Perplexity')
-			.addText(text => text
-				.setPlaceholder('Enter your api key')
-				.setValue(this.plugin.settings.ppxKey)
-				.onChange(async (value) => {
-					this.plugin.settings.ppxKey = value;
-					await this.plugin.saveSettings();
-				}));
-
-		new Setting(containerEl)
-			.setName('OpenAI API Key')
-			.setDesc('API Key from OpenAI')
-			.addText(text => text
-				.setPlaceholder('Enter your api key')
-				.setValue(this.plugin.settings.openaiKey)
-				.onChange(async (value) => {
-					this.plugin.settings.openaiKey = value;
-					await this.plugin.saveSettings();
-				}));
-	}
-}
-
-
