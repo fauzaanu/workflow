@@ -1,25 +1,39 @@
-# Perplexity Obsidian
+# Workflow Plugin for Obsidian
 
-Totally experimental and personal plugin to make my workflow easier. Uses Perplexity API and OpenAI API to generate summaries, rewrites, and tags for notes. Hopefully more options are coming.
+Workflow is a powerful plugin for the markdown-based knowledge management system, Obsidian. Workflow integrates programming workflows directly into your Obsidian editor, making your content editing more efficient and versatile.
 
-## Features:
+## Features
 
-1. **AI Assisted Research:** An icon is added to the left ribbon of the Obsidian workspace by this plugin. Upon clicking, you have the option to 'Research Current Note', 'Summarize Current Note', and 'Re-write Current Note', employing AI to enhance your note-taking process.
+### Diverse API Integration
+The Workflow plugin allows the integration of multiple APIs seamlessly into your Obsidian workspace. Although it comes with in-built support for OpenAI (GPT-3), the Workflow plugin is flexible and can integrate with **any other API that follows the same specification as OpenAI**. This greatly opens up possibilities for bringing AI-powered assistance into your Obsidian editor.
 
-2. **Summarize, Rewrite, and Mine Data:** Using AI, you can summarize your notes, rewrite them, or extract key points from them with just a few clicks.
+### Workflow Creation and Management
+The Workflow plugin enables you to create, edit, and delete workflows, each consisting of one or more tasks. These workflows assist in the automation of content updates, bringing more structure and ease to your content editing process.
 
-3. **Generates AI Tags:** It assists in generating meaningful tags from the text of your notes, adhering to the principles of the Cornell note-taking system.
+### Customizable Tasks
+Tasks within workflows are automated routines that commission the integrated API providers to perform an array of functions. These functions range from generating AI-created text, extracting information from unstructured text, and much more. Each task can be fine-tuned to fit your specific needs.
 
-4. **Constructs AI Titles:** The plugin is capable of generating the title for your notes.
+## Usage
 
-To execute these tasks, the currently active note is used. If the text length exceeds a specific limit, only the last 4000 characters are employed. (not implemented yet, the code is there however)
+A workflow is a collection of tasks that are executed in sequence. Workflows are versatile and can be customized based on your needs.
 
-## Installation:
+Every task within a workflow has its unique parameters:
 
-This plugin is designed to work with [Obsidian](https://obsidian.md/). Place it into your plugins folder and enable it from the Obsidian setting menu to install it.
+- **Provider**: Choose from the API providers you have configured.
+- **Temperature and Frequency Penalty**: Configure the AI's behavior during task execution.
+- **Prompt**: The trigger sent to the AI.
+- **System Prompt**: Additional instructions for the AI describing the desired format of the response.
+- **Mode**: Choose between 'append' or 'replace' modes for the task's output manipulation.
 
-Before you use this plugin, be sure to have your Perplexity API key and OpenAI API key. These keys are required to be inputted in the plugin settings for it to work correctly.
+## Installation
 
-## Summary:
+- Download the latest `workflow.zip` from the repository's `releases`.
+- Extract the `workflow.zip` to Obsidian vault's plugins folder: `<your_vault>/.obsidian/plugins/`.
+- Enabled the plugin within Obsidian's settings under the "Plugin" section.
+- Configure the API providers and set up workflows to meet your needs.
 
-Perplexity Obsidian, with its integration with Perplexity and OpenAI APIs, can bring out the maximum potential of your Obsidian notes. The plugin helps you to research, summarize and rewrite your notes, make them more concise, and well-structured, which ultimately brings you a more dynamic note-taking experience.
+## License
+
+The Workflow plugin for Obsidian is licensed under the terms of the MIT license. Refer to `LICENSE` for more information.
+
+**Note**: This is a basic README structure for the Workflow plugin. Additional instructions, details, screenshots, or contribution guidelines can be added as needed.
