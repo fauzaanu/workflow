@@ -20,7 +20,6 @@ interface Provider {
 	model: string;
 	apiKey: string;
 	endpoint: string;
-	jsonPath: string;
 }
 
 /**
@@ -200,7 +199,7 @@ function generateUniqueName(append: string): string {
  * @param workflow
  * @returns {Promise<string>} A promise that resolves with the content of the first choice of the response, or rejects with an error message.
  */
-async function call_provider(notes:string, provider: Provider, workflowTask: WorkflowTask, workflow: Workflow): Promise<string> {
+async function call_provider(notes: string, provider: Provider, workflowTask: WorkflowTask, workflow: Workflow): Promise<string> {
 	const options: RequestUrlParam = {
 		method: 'POST',
 		url: provider.endpoint,
@@ -217,7 +216,7 @@ async function call_provider(notes:string, provider: Provider, workflowTask: Wor
 					role: 'system',
 					content: "Make sure your answer helps in achiving the following objective" + workflow.objective
 				},
-				{role: 'user', content: workflowTask.prompt + "current notes:"+notes},
+				{role: 'user', content: workflowTask.prompt + "current notes:" + notes},
 			],
 			temperature: workflowTask.temperature,
 			presence_penalty: workflowTask.frequencyPenalty,
@@ -228,7 +227,7 @@ async function call_provider(notes:string, provider: Provider, workflowTask: Wor
 	try {
 		const response: RequestUrlResponse = await requestUrl(options);
 		const responseData = response.json; // Directly accessing the json property
-		new Notice('Response from OpenAI API: ' + JSON.stringify(responseData));
+		// new Notice('Response from OpenAI API: ' + JSON.stringify(responseData));
 		return responseData.choices[0].message.content;
 	} catch (error) {
 		let errorMessage = 'An error occurred: ' + error;
@@ -391,7 +390,6 @@ class ProvidersModal extends Modal {
 						model: 'model_here',
 						apiKey: 'api_key_here',
 						endpoint: 'https://api.openai.com/v1/chat/completions',
-						jsonPath: 'choices[0].message.content',
 					};
 					this.plugin.settings.providers.push(provider);
 					// Save settings
@@ -451,17 +449,6 @@ class ProvidersModal extends Modal {
 					.setValue(provider.endpoint)
 					.onChange(async value => {
 						provider.endpoint = value;
-						await this.plugin.saveSettings();
-						this.plugin.settingsTab.refresh();
-					}));
-
-			new Setting(providerDiv)
-				.setName('JSON Path')
-				.addText(textInput => textInput
-					.setPlaceholder('Enter your JSON Path')
-					.setValue(provider.jsonPath)
-					.onChange(async value => {
-						provider.jsonPath = value;
 						await this.plugin.saveSettings();
 						this.plugin.settingsTab.refresh();
 					}));
@@ -771,8 +758,15 @@ export default class PpxObsidian
 											new Notice(`Task ${task.name} completed.`);
 											// RECURSIVE CALL
 											// run the next task
-											if (workflowTasks.indexOf(task) < workflowTasks.length - 1)
+											if (workflowTasks.indexOf(task) < workflowTasks.length - 1) {
+												const totalTasks = workflowTasks.length;
+
+												new Notice(`Running task ${workflowTasks.indexOf(task) + 1} of ${totalTasks}`);
 												runTask(workflowTasks[workflowTasks.indexOf(task) + 1]);
+											} else {
+												new Notice(`Workflow ${workflow.workflowName} completed.`)
+											}
+
 										} else if (task.mode === 'replace') {
 											view.editor.setValue(response);
 											if (workflowTasks.indexOf(task) < workflowTasks.length - 1)
