@@ -47,7 +47,7 @@ This plugin is licensed under the [GNU General Public License v3.0](https://www.
 
 You can refer to the [LICENSE](LICENSE) file for more details.
 
-by [Mohamed Elidrissi](https://fauzaanu.com)
+by [@fauzaanu](https://t.me/fauzaanu)
 
 
 
