@@ -1,96 +1,25 @@
-# Obsidian Sample Plugin
+# Perplexity Obsidian
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+Totally experimental and personal plugin to make my workflow easier. Uses Perplexity API and OpenAI API to generate summaries, rewrites, and tags for notes. Hopefully more options are coming.
 
-This project uses Typescript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in Typescript Definition format, which contains TSDoc comments describing what it does.
+## Features:
 
-**Note:** The Obsidian API is still in early alpha and is subject to change at any time!
+1. **AI Assisted Research:** An icon is added to the left ribbon of the Obsidian workspace by this plugin. Upon clicking, you have the option to 'Research Current Note', 'Summarize Current Note', and 'Re-write Current Note', employing AI to enhance your note-taking process.
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open Sample Modal" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and output 'click' to the console.
-- Registers a global interval which logs 'setInterval' to the console.
+2. **Summarize, Rewrite, and Mine Data:** Using AI, you can summarize your notes, rewrite them, or extract key points from them with just a few clicks.
 
-## First time developing plugins?
+3. **Generates AI Tags:** It assists in generating meaningful tags from the text of your notes, adhering to the principles of the Cornell note-taking system.
 
-Quick starting guide for new plugin devs:
+4. **Constructs AI Titles:** The plugin is capable of generating the title for your notes.
 
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `main.ts` to `main.js`.
-- Make changes to `main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
+To execute these tasks, the currently active note is used. If the text length exceeds a specific limit, only the last 4000 characters are employed. (not implemented yet, the code is there however)
 
-## Releasing new releases
+## Installation:
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
+This plugin is designed to work with [Obsidian](https://obsidian.md/). Place it into your plugins folder and enable it from the Obsidian setting menu to install it.
 
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
+Before you use this plugin, be sure to have your Perplexity API key and OpenAI API key. These keys are required to be inputted in the plugin settings for it to work correctly.
 
-## Adding your plugin to the community plugin list
+## Summary:
 
-- Check https://github.com/obsidianmd/obsidian-releases/blob/master/plugin-review.md
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
-
-## How to use
-
-- Clone this repo.
-- Make sure your NodeJS is at least v16 (`node --version`).
-- `npm i` or `yarn` to install dependencies.
-- `npm run dev` to start compilation in watch mode.
-
-## Manually installing the plugin
-
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
-
-## Improve code quality with eslint (optional)
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code. 
-- To use eslint with this project, make sure to install eslint from terminal:
-  - `npm install -g eslint`
-- To use eslint to analyze this project use this command:
-  - `eslint main.ts`
-  - eslint will then create a report with suggestions for code improvement by file and line number.
-- If your source code is in a folder, such as `src`, you can use eslint with this command to analyze all files in that folder:
-  - `eslint .\src\`
-
-## Funding URL
-
-You can include funding URLs where people who use your plugin can financially support it.
-
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
-
-```json
-{
-    "fundingUrl": "https://buymeacoffee.com"
-}
-```
-
-If you have multiple URLs, you can also do:
-
-```json
-{
-    "fundingUrl": {
-        "Buy Me a Coffee": "https://buymeacoffee.com",
-        "GitHub Sponsor": "https://github.com/sponsors",
-        "Patreon": "https://www.patreon.com/"
-    }
-}
-```
-
-## API Documentation
-
-See https://github.com/obsidianmd/obsidian-api
+Perplexity Obsidian, with its integration with Perplexity and OpenAI APIs, can bring out the maximum potential of your Obsidian notes. The plugin helps you to research, summarize and rewrite your notes, make them more concise, and well-structured, which ultimately brings you a more dynamic note-taking experience.
