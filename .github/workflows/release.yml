@@ -33,4 +33,5 @@ jobs:
                   gh release create "$tag" \
                     --title="$tag" \
                     --draft \
-                    plugin.zip
+                    plugin.zip \
+                    main.js manifest.json styles.css
