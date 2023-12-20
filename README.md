@@ -3,7 +3,7 @@
 Workflow is an obsidian plugin that allows you to create and run workflows with multiple tasks. Each task can be configured to use a different API provider, and different parameters can be set for each task. You can add as many tasks as you want to a workflow, and each task starts after the previous task has finished.
 
 ## Wide API Integration
-Though the Workflow plugin has built-in support for OpenAI (GPT-3), it is not bound to it. Workflow is designed to be extendable, enabling integration with any API that follows the same specification as OpenAI. This feature enhances its adaptability, allowing you to harness the power of various AI services within your Obsidian workspace.
+Though the Workflow plugin has built-in support for OpenAI (GPT-3), it is not bound to it. Workflow is designed to be extendable, enabling integration with any API that follows the same specification as OpenAI. This feature enhances its adaptability, allowing you to harness the power of various AI services within your Obsidian workspace. 
 
 ## Task and Workflow Management
 Workflow lets you seamlessly create, edit, and manage your workflows. Each workflow can contain multiple tasks, enabling comprehensive automation sequences. You can bring structu!re to your content editing and management process, thanks to the organized task flow.
