@@ -1,11 +1,11 @@
 {
-	"id": "perplexity-obsidian-plugin",
-	"name": "Perplexity Obsidian",
-	"version": "1.0.0",
+	"id": "workflow",
+	"name": "Workflow",
+	"version": "1.0.1",
 	"minAppVersion": "0.15.0",
-	"description": "Perplexity Obsidian plugin",
-	"author": "fauzaanu",
+	"description": "AI-powered workflow automation, something like the task based AI assistants",
+	"author": "Fauzaan Gasim",
 	"authorUrl": "https://fauzaanu.com",
-	"fundingUrl": "https://obsidian.md/pricing",
+	"fundingUrl": "",
 	"isDesktopOnly": false
 }
