@@ -18,5 +18,7 @@ TBA
 
 Download the `workflow.zip` file from the repository's releases page and extract it to your Obsidian vault's plugin folder - `<your_vault>/.obsidian/plugins/`. Once that's done, enable it from the "Plugin" section of the Obsidian's settings. Configure the API providers and set up workflows based on your requirements.
 
+## Usage
+
 
 
