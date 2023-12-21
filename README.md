@@ -1,5 +1,6 @@
 # Workflow Plugin for Obsidian
-![](.README_images/x.gif)
+<img src=".README_images/x.gif" />
+
 Workflow is an obsidian plugin that allows you to create and run connected LLM workflows. Each task can be configured to use a different API provider and parameters. 
 
 A provider in the context of this plugin is the API connection including the model. Settings such as temperature, frequency penalty and max tokens are defined outside of the provider and are set for each task. This means you can use a provider with different settings.
