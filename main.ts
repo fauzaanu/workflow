@@ -1,15 +1,17 @@
 import {
-	App, IconName, MarkdownView, Menu,
+	App,
+	IconName,
+	MarkdownView,
+	Menu,
 	Modal,
 	Notice,
 	Plugin,
 	PluginSettingTab,
+	requestUrl,
+	RequestUrlParam,
 	RequestUrlResponse,
 	Setting
 } from 'obsidian';
-import {requestUrl, RequestUrlParam} from 'obsidian';
-
-type TaskMode = 'append' | 'replace';
 
 /**
  * Represents a provider that can be used to fetch data from an API.
@@ -24,8 +26,15 @@ interface Provider {
 
 /**
  * Represents a workflow task.
- *
  * @interface
+ * @property {string} name - The name of the task.
+ * @property {Provider} provider - The provider of the task.
+ * @property {number} temperature - The temperature for task execution.
+ * @property {number} frequencyPenalty - The frequency penalty for task execution.
+ * @property {number} maxTokens - The maximum number of tokens allowed for task execution.
+ * @property {string} prompt - The prompt for the task.
+ * @property {string} systemPrompt - The system prompt for the task.
+ * @property {TaskMode} mode - The mode for task execution.
  */
 interface WorkflowTask {
 	name: string;
@@ -35,7 +44,6 @@ interface WorkflowTask {
 	maxTokens: number;
 	prompt: string;
 	systemPrompt: string;
-	mode: TaskMode;
 }
 
 /**
@@ -62,13 +70,12 @@ interface PpxObsidianSettings {
 }
 
 /**
- * The default settings for PpxObsidian.
- *
- * @typedef {Object} DEFAULT_SETTINGS
- * @property {string} openaiKey - The OpenAI API key.
- * @property {string} ppxKey - The Ppx API key.
- * @property {Array<Object>} workflows - An array of workflows.
- * @property {Array<Object>} providers - An array of providers.
+ * Default settings object for PpxObsidian.
+ * @typedef {Object} PpxObsidianSettings
+ * @property {string} openaiKey - The OpenAI key.
+ * @property {string} ppxKey - The Ppx key.
+ * @property {Array} workflows - An array of workflows.
+ * @property {Array} providers - An array of providers.
  */
 const DEFAULT_SETTINGS: PpxObsidianSettings = {
 	openaiKey: '',
@@ -80,6 +87,7 @@ const DEFAULT_SETTINGS: PpxObsidianSettings = {
 /**
  * Generates a unique task name by combining a randomly generated unique ID and a randomly selected element name from the periodic table.
  *
+ * @param {string} append - The string to append to the unique task name.
  * @returns {string} The unique task name.
  */
 function generateUniqueName(append: string): string {
@@ -194,9 +202,10 @@ function generateUniqueName(append: string): string {
 /**
  * Makes a request to a provider using the given messages and provider information.
  *
+ * @param {string} notes - The current notes.
  * @param {Provider} provider - The provider information.
- * @param workflowTask
- * @param workflow
+ * @param {WorkflowTask} workflowTask - The workflow task.
+ * @param {Workflow} workflow - The workflow.
  * @returns {Promise<string>} A promise that resolves with the content of the first choice of the response, or rejects with an error message.
  */
 async function call_provider(notes: string, provider: Provider, workflowTask: WorkflowTask, workflow: Workflow): Promise<string> {
@@ -236,6 +245,11 @@ async function call_provider(notes: string, provider: Provider, workflowTask: Wo
 	}
 }
 
+/**
+ * Generates a random icon from a predefined list of icons.
+ *
+ * @returns {string} A random icon from the list.
+ */
 function generateRandomIcon() {
 	// generate a random icon
 	const icons = [
@@ -362,6 +376,7 @@ class WorkflowSettingTab
 
 /**
  * Represents a modal for managing API providers.
+ * @extends Modal
  */
 class ProvidersModal extends Modal {
 	provider: Provider;
@@ -538,12 +553,12 @@ class WorkflowModal extends Modal {
 			.setName(`Add Task`)
 			.addButton(button => button
 				.setButtonText('Add Task')
+				.setCta()
 				.onClick(() => {
 					// create a new task
 					let task: WorkflowTask = {
 						name: generateUniqueName("TSK"),
 						prompt: 'prompt_here',
-						mode: 'append',
 						systemPrompt: 'system_prompt_here',
 						// for the provider grab the first provider in the list
 						provider: this.plugin.settings.providers[0],
@@ -624,17 +639,6 @@ class WorkflowModal extends Modal {
 				});
 
 			new Setting(contentEl)
-				.setName('Mode')
-				.addDropdown(dropdown => {
-					dropdown.addOption('append', 'Append');
-					dropdown.addOption('replace', 'Replace');
-					dropdown.setValue(task.mode)
-						.onChange(async value => {
-							task.mode = value as TaskMode;
-						});
-				});
-
-			new Setting(contentEl)
 				.setName('Temperature')
 				.addText(textInput => textInput
 					.setPlaceholder('Enter your temperature')
@@ -682,6 +686,32 @@ class WorkflowModal extends Modal {
 					}));
 		});
 
+		// add a button to add a new task
+		new Setting(contentEl)
+			.setName(`Add Task`)
+			.addButton(button => button
+				.setButtonText('Add Task')
+				.setCta()
+				.onClick(() => {
+					// create a new task
+					let task: WorkflowTask = {
+						name: generateUniqueName("TSK"),
+						prompt: 'prompt_here',
+						systemPrompt: 'system_prompt_here',
+						// for the provider grab the first provider in the list
+						provider: this.plugin.settings.providers[0],
+						temperature: 0,
+						frequencyPenalty: 2.0,
+						maxTokens: 0,
+					};
+					this.workflow.tasks.push(task);
+					// Refresh the display to include the new task edit fields
+					this.plugin.saveSettings().then(r => {
+						this.close();
+						this.open();
+					});
+				}));
+
 	}
 
 	onClose() {
@@ -693,7 +723,7 @@ class WorkflowModal extends Modal {
 }
 
 /**
- * Represents the PpxObsidian plugin.
+ * A class representing the PpxObsidian plugin.
  * @extends Plugin
  */
 export default class PpxObsidian
@@ -711,8 +741,6 @@ export default class PpxObsidian
 	async onload() {
 		await this.loadSettings();
 
-		// grab the current note
-		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
 
 		// add the workflow settings tab
 		this.settingsTab = new WorkflowSettingTab(this.app, this);
@@ -721,85 +749,129 @@ export default class PpxObsidian
 
 		// create a ribbon icon and add a menu item to the ribbon icon per workflow
 		this.addRibbonIcon('book', 'Run Workflow', (evt: MouseEvent) => {
-			// create a file menu on the ribbon icon
-			const fileMenu = new Menu();
-			// add a menu item for each workflow
-			this.settings.workflows.forEach(workflow => {
-				fileMenu.addItem(item => {
-					item.setTitle(workflow.workflowName);
-					item.setIcon(workflow.workflowIcon);
-					item.onClick(() => {
-						// run each task one by one
-						const workflowTasks = workflow.tasks;
+				// create a file menu on the ribbon icon
+				const fileMenu = new Menu();
+				// add a menu item for each workflow
+				this.settings.workflows.forEach(workflow => {
+					fileMenu.addItem(item => {
+						item.setTitle(workflow.workflowName);
+						item.setIcon(workflow.workflowIcon);
+						item.onClick(() => {
+							// run each task one by one
+							const workflowTasks = workflow.tasks;
 
-						function runTask(task: WorkflowTask) {
-							// create a new message object
-							let message = {
-								id: generateUniqueName("MSG"),
-								type: 'text',
-								content: task.prompt,
-							};
-
+							// grab the current note
+							let view = this.app.workspace.getActiveViewOfType(MarkdownView);
 
 							if (view) {
-								// call the provider
-								call_provider(
-									view.editor.getValue(),
-									task.provider,
-									task,
-									workflow
-								).then(response => {
-									// append the response to the note
-									if (view) {
-										let entireText = view.editor.getValue();
-										if (task.mode === 'append') {
-											view.editor.setCursor({line: Infinity, ch: Infinity});
-											view.editor.replaceSelection('\n' + response);
-											new Notice(`Task ${task.name} completed.`);
-											// RECURSIVE CALL
-											// run the next task
-											if (workflowTasks.indexOf(task) < workflowTasks.length - 1) {
-												const totalTasks = workflowTasks.length;
-
-												new Notice(`Running task ${workflowTasks.indexOf(task) + 1} of ${totalTasks}`);
-												runTask(workflowTasks[workflowTasks.indexOf(task) + 1]);
-											} else {
-												new Notice(`Workflow ${workflow.workflowName} completed.`)
-											}
-
-										} else if (task.mode === 'replace') {
-											view.editor.setValue(response);
-											if (workflowTasks.indexOf(task) < workflowTasks.length - 1)
-												runTask(workflowTasks[workflowTasks.indexOf(task) + 1]);
-											new Notice(`Task ${task.name} completed.`);
-										}
-									}
-								});
-							} else {
-								new Notice('No active note found.');
+								let currentNote = view.editor.getValue();
+								view.editor.setValue(currentNote + `\n\n> 🤖▶️ Running workflow ${workflow.workflowName}...`)
 							}
 
-						}
+							// run the tasks ( recursively )
+							runTask(workflowTasks[0]);
 
-						// run the tasks
-						runTask(workflowTasks[0]);
-						new Notice(`Workflow ${workflow.workflowName} completed.`)
+							if (view) {
+								let originalText = view.editor.getValue();
+								let modifiedText = originalText.replace(/(\n{3,})/g, '\n\n');
+								view.editor.setValue(modifiedText);
+							}
+
+							function removeEmptyLines(text: string) {
+								return text.replace(/(\n{3,})/g, '\n\n');
+							}
+
+							function removeEmptyLinesfromStart(text: string) {
+								// This regular expression will match all leading newline characters
+								return text.replace(/^(\n+)/, '');
+							}
+
+							function ignoreBotLines(entireText: string) {
+								// ignore the lines that starts with a >
+								let lines = entireText.split('\n');
+								let filteredLines = lines.filter(line => !line.startsWith('>'));
+								entireText = filteredLines.join('\n');
+								return entireText;
+							}
+
+
+							async function runTask(task: WorkflowTask) {
+								// create a new message object
+								let message = {
+									id: generateUniqueName("MSG"),
+									type: 'text',
+									content: task.prompt,
+								};
+
+								if (view) {
+									let entireText = removeEmptyLinesfromStart(removeEmptyLines(ignoreBotLines(view.editor.getValue())));
+									let currentNote = removeEmptyLines(view.editor.getValue());
+									const totalTasks = workflowTasks.length;
+									view.editor.setValue('\n\n' + currentNote + `\n\n> 🤖▶️ Running task ${workflowTasks.indexOf(task) + 2} of ${totalTasks}: : ${task.name} \n\n`);
+
+									// call the provider
+									call_provider(
+										entireText,
+										task.provider,
+										task,
+										workflow
+									).then(response => {
+											if (view) {
+												let currentNote = removeEmptyLines(view.editor.getValue());
+												view.editor.setValue('\n\n' + currentNote + '\n\n' + response + `\n\n> 🤖✅ Task ${workflowTasks.indexOf(task) + 1} of ${workflowTasks.length} : ${task.name} completed.\n\n`);
+
+												if (workflowTasks.indexOf(task) < workflowTasks.length - 1) {
+													let currentNote = removeEmptyLines(view.editor.getValue());
+													runTask(workflowTasks[workflowTasks.indexOf(task) + 1]);
+													// clean up
+													view.editor.setValue(removeEmptyLinesfromStart(removeEmptyLines(view.editor.getValue())));
+												} else {
+													let currentNote = removeEmptyLines(view.editor.getValue());
+													view.editor.setValue('\n\n' + currentNote + `\n\n> 🤖✅✅ Workflow ${workflow.workflowName} completed.\n\n`);
+													// clean up
+													view.editor.setValue(removeEmptyLinesfromStart(removeEmptyLines(view.editor.getValue())));
+												}
+											} else {
+												new Notice('No active note found.');
+											}
+										}
+									);
+
+								} else {
+									new Notice('No active note found.');
+								}
+
+							}
+						});
 					});
 				});
-			});
 
-			// add the file menu to the ribbon icon
-			fileMenu.showAtPosition({x: evt.clientX, y: evt.clientY});
-		});
+				// add the file menu to the ribbon icon
+				fileMenu.showAtPosition({x: evt.clientX, y: evt.clientY});
+			}
+		);
 
 
 		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
 		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			console.log('click', evt);
-		});
+		this
+			.registerDomEvent(document,
 
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
+				'click'
+				, (
+					evt: MouseEvent
+				) => {
+					console
+						.log(
+							'click'
+							,
+							evt
+						);
+				}
+			)
+		;
+
+// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
 		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
 	}
 
@@ -807,9 +879,11 @@ export default class PpxObsidian
 
 	}
 
+
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
 	}
+
 
 	async saveSettings() {
 		await this.saveData(this.settings);
