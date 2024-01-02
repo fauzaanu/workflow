@@ -9,7 +9,7 @@ A provider in the context of this plugin is the API connection including the mod
 1. [OpenAI](https://openai.com/)
 2. [Perplexity](https://perplexity.ai/)
 
->If you dont want to modify the plugin, you can use a cloudflare worker to restructure the API response to match the format of the other providers. see [replicate.js](replicate.js) for an idea. The only requirement is that the response should be in the same format as openAI response.
+>If you dont want to modify the plugin, you can use a cloudflare worker to restructure the API response to match the format of the other providers. see [replicate.js](replicate.js) for an idea. The only requirement is that the response should be in the same format as openAI response. 
 
 ## The idea of a workflow
 
