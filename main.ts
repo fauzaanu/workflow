@@ -13,6 +13,8 @@ import {
 	Setting
 } from 'obsidian';
 
+import {TAbstractFile, TFile, TFolder} from 'obsidian';
+
 /**
  * Represents a provider that can be used to fetch data from an API.
  * @interface Provider
@@ -209,6 +211,7 @@ function generateUniqueName(append: string): string {
  * @returns {Promise<string>} A promise that resolves with the content of the first choice of the response, or rejects with an error message.
  */
 async function call_provider(notes: string, provider: Provider, workflowTask: WorkflowTask, workflow: Workflow): Promise<string> {
+	// return notes; // for debugging purposes
 	const options: RequestUrlParam = {
 		method: 'POST',
 		url: provider.endpoint,
@@ -741,115 +744,172 @@ export default class PpxObsidian
 	async onload() {
 		await this.loadSettings();
 
+		const workflows = this.settings.workflows;
+
+		// Get all .workflow files in the vault
+		const workflowFiles = this.app.vault.getFiles().filter(file => file.extension === 'workflow');
+
+		// For each .workflow file, load and parse its JSON content, then process it
+		for (const workflowFile of workflowFiles) {
+			try {
+				const fileContent = await this.app.vault.read(workflowFile);
+				const parsedContent = JSON.parse(fileContent);
+
+				// Here: Add parsedContent to your list of workflows. Make sure that
+				// parsedContent is indeed a valid workflow object by checking its structure.
+			} catch (e) {
+				console.log(`Failed to load or parse .workflow file: ${workflowFile.basename}`, e);
+			}
+		}
+
+		// Helper functions for manipulating text
+		function removeEmptyLines(text: string) {
+			return text.replace(/(\n{3,})/g, '\n\n');
+		}
+
+		function removeEmptyLinesfromStart(text: string) {
+			// This regular expression will match all leading newline characters
+			return text.replace(/^(\n+)/, '');
+		}
+
+		function ignoreBotLines(entireText: string) {
+			// ignore the lines that starts with a >
+			let lines = entireText.split('\n');
+			let filteredLines = lines.filter(line => !line.startsWith('>'));
+			entireText = filteredLines.join('\n');
+			return entireText;
+		}
+
+		function grabLastSectionByLine(entireText: string, lineNumber: number): string {
+			const lines = entireText.split('\n');
+			let markdownLinesIndex: number[] = [];
+			for (let i = 0; i <= lineNumber; i++) {
+				if (lines[i].startsWith('# ') || lines[i].startsWith('##')) {
+					markdownLinesIndex.push(i);
+				}
+			}
+			let lastSectionText = '';
+			if (markdownLinesIndex.length !== 0) {
+				const lastMarkdownLineIndex = markdownLinesIndex[markdownLinesIndex.length - 1];
+				lastSectionText = lines.slice(lastMarkdownLineIndex).join('\n');
+			}
+			return lastSectionText.trim();
+		}
+
 
 		// add the workflow settings tab
 		this.settingsTab = new WorkflowSettingTab(this.app, this);
 		this.addSettingTab(this.settingsTab);
-
+		const fileMenu = new Menu();
 
 		// create a ribbon icon and add a menu item to the ribbon icon per workflow
 		this.addRibbonIcon('book', 'Run Workflow', (evt: MouseEvent) => {
 				// create a file menu on the ribbon icon
-				const fileMenu = new Menu();
-				// add a menu item for each workflow
-				this.settings.workflows.forEach(workflow => {
-					fileMenu.addItem(item => {
-						item.setTitle(workflow.workflowName);
-						item.setIcon(workflow.workflowIcon);
-						item.onClick(() => {
-							// run each task one by one
-							const workflowTasks = workflow.tasks;
-
-							// grab the current note
-							let view = this.app.workspace.getActiveViewOfType(MarkdownView);
-
-							if (view) {
-								let currentNote = view.editor.getValue();
-								view.editor.setValue(currentNote + `\n\n> 🤖▶️ Running workflow ${workflow.workflowName}...`)
-							}
-
-							// run the tasks ( recursively )
-							runTask(workflowTasks[0]);
-
-							if (view) {
-								let originalText = view.editor.getValue();
-								let modifiedText = originalText.replace(/(\n{3,})/g, '\n\n');
-								view.editor.setValue(modifiedText);
-							}
-
-							function removeEmptyLines(text: string) {
-								return text.replace(/(\n{3,})/g, '\n\n');
-							}
-
-							function removeEmptyLinesfromStart(text: string) {
-								// This regular expression will match all leading newline characters
-								return text.replace(/^(\n+)/, '');
-							}
-
-							function ignoreBotLines(entireText: string) {
-								// ignore the lines that starts with a >
-								let lines = entireText.split('\n');
-								let filteredLines = lines.filter(line => !line.startsWith('>'));
-								entireText = filteredLines.join('\n');
-								return entireText;
-							}
-
-
-							async function runTask(task: WorkflowTask) {
-								// create a new message object
-								let message = {
-									id: generateUniqueName("MSG"),
-									type: 'text',
-									content: task.prompt,
-								};
-
-								if (view) {
-									let entireText = removeEmptyLinesfromStart(removeEmptyLines(ignoreBotLines(view.editor.getValue())));
-									let currentNote = removeEmptyLines(view.editor.getValue());
-									const totalTasks = workflowTasks.length;
-									view.editor.setValue('\n\n' + currentNote + `\n\n> 🤖▶️ Running task ${workflowTasks.indexOf(task) + 2} of ${totalTasks}: : ${task.name} \n\n`);
-
-									// call the provider
-									call_provider(
-										entireText,
-										task.provider,
-										task,
-										workflow
-									).then(response => {
-											if (view) {
-												let currentNote = removeEmptyLines(view.editor.getValue());
-												view.editor.setValue('\n\n' + currentNote + '\n\n' + response + `\n\n> 🤖✅ Task ${workflowTasks.indexOf(task) + 1} of ${workflowTasks.length} : ${task.name} completed.\n\n`);
-
-												if (workflowTasks.indexOf(task) < workflowTasks.length - 1) {
-													let currentNote = removeEmptyLines(view.editor.getValue());
-													runTask(workflowTasks[workflowTasks.indexOf(task) + 1]);
-													// clean up
-													view.editor.setValue(removeEmptyLinesfromStart(removeEmptyLines(view.editor.getValue())));
-												} else {
-													let currentNote = removeEmptyLines(view.editor.getValue());
-													view.editor.setValue('\n\n' + currentNote + `\n\n> 🤖✅✅ Workflow ${workflow.workflowName} completed.\n\n`);
-													// clean up
-													view.editor.setValue(removeEmptyLinesfromStart(removeEmptyLines(view.editor.getValue())));
-												}
-											} else {
-												new Notice('No active note found.');
-											}
-										}
-									);
-
-								} else {
-									new Notice('No active note found.');
-								}
-
-							}
-						});
-					});
-				});
 
 				// add the file menu to the ribbon icon
 				fileMenu.showAtPosition({x: evt.clientX, y: evt.clientY});
 			}
 		);
+
+		// add a menu item for each workflow
+		this.settings.workflows.forEach(workflow => {
+			fileMenu.addItem(item => {
+				item.setTitle(workflow.workflowName);
+				item.setIcon(workflow.workflowIcon);
+				item.onClick(() => {
+
+					const workflowTasks = workflow.tasks;
+					let view = this.app.workspace.getActiveViewOfType(MarkdownView);
+
+					if (!view) {
+						new Notice('No active note found.');
+						return;
+					}
+
+					const cursor = view.editor.getCursor().line
+					const entireText = grabLastSectionByLine(removeEmptyLinesfromStart(removeEmptyLines(ignoreBotLines(view.editor.getValue()))), cursor);
+					let currentNote = removeEmptyLines(view.editor.getValue());
+					currentNote = view.editor.getValue();
+					new Notice(cursor.toString() + ' ' + entireText);
+					view.editor.setValue(currentNote + `\n\n> [!info] WorkFlow\n> 🤖▶️ Running workflow ${workflow.workflowName}...`)
+
+					// run the tasks ( recursively )
+					runTask(workflowTasks[0]);
+
+					async function runTask(task: WorkflowTask) {
+						const totalTasks = workflowTasks.length;
+
+						// create a new message object
+						let message = {
+							id: generateUniqueName("MSG"),
+							type: 'text',
+							content: task.prompt,
+						};
+
+						if (!view) {
+							new Notice('No active note found.');
+							return;
+						}
+
+						let newText = `\n\n> [!info] WorkFlow\n> 🤖▶️ Running task ${workflowTasks.indexOf(task) + 1} of ${totalTasks}: : ${task.name} \n\n`;
+						view.editor.setValue(currentNote + '\n\n' + newText);
+
+						let noteTitle = view.file?.basename
+
+						if (noteTitle) {
+							currentNote = noteTitle + currentNote
+						}
+
+						// call the provider
+						call_provider(
+							currentNote,
+							task.provider,
+							task,
+							workflow
+						).then(response => {
+								if (view) {
+									let currentNote = removeEmptyLines(view.editor.getValue());
+									view.editor.setValue('\n\n' + currentNote + '\n\n' + response + `\n\n> [!info] WorkFlow\n> 🤖✅ Task ${workflowTasks.indexOf(task) + 1} of ${workflowTasks.length} : ${task.name} completed.\n\n`);
+
+									if (workflowTasks.indexOf(task) < workflowTasks.length - 1) {
+										let currentNote = removeEmptyLines(view.editor.getValue());
+										runTask(workflowTasks[workflowTasks.indexOf(task) + 1]);
+										// clean up
+										view.editor.setValue(removeEmptyLinesfromStart(removeEmptyLines(view.editor.getValue())));
+									} else {
+										let currentNote = removeEmptyLines(view.editor.getValue());
+										view.editor.setValue('\n\n' + currentNote + `\n\n> [!info] WorkFlow\n> 🤖✅✅ Workflow ${workflow.workflowName} completed.\n\n`);
+										// clean up
+										view.editor.setValue(removeEmptyLinesfromStart(removeEmptyLines(view.editor.getValue())));
+										let originalText = view.editor.getValue();
+										let modifiedText = originalText.replace(/(\n{3,})/g, '\n\n');
+										view.editor.setValue(modifiedText);
+									}
+								} else {
+									new Notice('No active note found.');
+								}
+							}
+						);
+					}
+				});
+			});
+		});
+
+
+		let currentMousePosition = {x: 0, y: 0};
+		window.addEventListener('mousemove', function (event) {
+			currentMousePosition.x = event.clientX;
+			currentMousePosition.y = event.clientY;
+		});
+
+		this.addCommand({
+			id: 'show-file-menu',
+			name: 'Show File Menu',
+			callback: () => {
+				// show at the previously recorded mouse position
+				fileMenu.showAtPosition(currentMousePosition);
+			}
+		});
 
 
 		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
