@@ -2,7 +2,7 @@
 
 Workflow is an obsidian plugin that allows you to create and run connected LLM workflows. Each task can be configured to use a different API provider and parameters.
 
-As of now workflow supports OpenAI and Perplexity + any other provider that follow the same schema of OpenAI API
+> As of now workflow supports OpenAI and Perplexity + any other provider that follow the same schema of OpenAI API
 
 ## Settings
 
@@ -10,8 +10,8 @@ As of now workflow supports OpenAI and Perplexity + any other provider that foll
 
 Setting tab has two sections:
 
-API PROVIDERS
-WORKFLOWS
+1. [API PROVIDERS](#api-providers)
+2. [WORKFLOWS](#workflows)
 
 ### API PROVIDERS
 
