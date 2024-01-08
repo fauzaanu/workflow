@@ -61,7 +61,7 @@ export async function call_provider(
 				{role: "user", content: "user instruction:" + workflowTask.prompt + "user notes:" + notes}
 			],
 			temperature: temperature,
-			presence_penalty: '1.9',
+			presence_penalty: 1.9,
 			max_tokens: workflowTask.maxTokens
 		})
 	};
