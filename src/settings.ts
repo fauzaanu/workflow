@@ -1,8 +1,8 @@
 import {App, PluginSettingTab, Setting} from "obsidian";
-import {ProvidersModal, WorkflowModal} from "./modals";
+import {ApiKeysModal, WorkflowModal} from "./modals";
 import {Workflow, WorkflowSettings} from "./types";
 import {generateRandomIcon, generateUniqueName} from "./helpers";
-import WorkflowPlugin from "./main";
+import WorkflowPlugin from "../main";
 
 /**
  * A class representing the Workflow Setting Tab.
@@ -25,26 +25,34 @@ export class WorkflowSettingTab
 
 	display(): void {
 		const {containerEl} = this;
-
 		// Here you can add your dynamic content as explained in the previous response
 		// this.plugin.settings will give you access to your plugin's settings
 		containerEl.empty(); // Clear the settings container
-		containerEl.createEl('h1', {text: 'API Providers'});
-		// list all providers as labels, name, model,temperature, frequency penalty, max tokens
-		let providersDiv = containerEl.createEl('div');
-		let amountOfProviders = this.plugin.settings.providers.length;
 
-		providersDiv.createEl('p', {text: `Amount of Providers: ${amountOfProviders}`});
-
+		containerEl.createEl('h1', {text: 'Set API Keys'});
 		// button to edit / view providers
 		new Setting(containerEl)
-			.setName('Edit / View Providers')
+			.setName('Add API Keys')
 			.addButton(button => button
 				.setButtonText('Edit')
 				.onClick(() => {
-					let modal = new ProvidersModal(this.app, this.plugin.settings.providers[0], this.plugin);
+					let modal = new ApiKeysModal(this.app, this.plugin);
 					modal.open();
 				}));
+
+		containerEl.createEl('h1', {text: 'LLM Models'});
+
+		let infoDiv = containerEl.createEl('div');
+		infoDiv.createEl('p', {text: `Once you have added your API keys, you can use the specefic models below`});
+
+		let providersDiv = containerEl.createEl('div');
+		let amountOfProviders = this.plugin.settings.providers.length;
+
+		// list all providers and models
+		for (let provider of this.plugin.settings.providers) {
+			const status = provider.apiKey.trim() === '' ? '🔴' : '🟢';
+			providersDiv.createEl('p', {text: `${status} / ${provider.name} / ${provider.model}`});
+		}
 
 
 		containerEl.createEl('h1', {text: 'Workflows'});
@@ -120,5 +128,22 @@ export class WorkflowSettingTab
  */
 export const DEFAULT_SETTINGS: WorkflowSettings = {
 	workflows: [],
-	providers: [],
+	providers: [
+		// Models from Perplexity
+		{name: 'perplexity', model: 'pplx-7b-online', apiKey: ''},
+		{name: 'perplexity', model: 'pplx-70b-online', apiKey: ''},
+		{name: 'perplexity', model: 'pplx-7b-chat', apiKey: ''},
+		{name: 'perplexity', model: 'pplx-70b-chat', apiKey: ''},
+		{name: 'perplexity', model: 'mistral-7b-instruct', apiKey: ''},
+		{name: 'perplexity', model: 'mistral-8x7b-instruct', apiKey: ''},
+		{name: 'perplexity', model: 'codellama-34b-instruct', apiKey: ''},
+		{name: 'perplexity', model: 'llama-2-70b-chat', apiKey: ''},
+
+		// Models from OpenAI
+		{name: 'openai', model: 'gpt-3.5-turbo', apiKey: ''},
+		{name: 'openai', model: 'gpt-4', apiKey: ''},
+	],
+	apiKeys: []
 }
+
+

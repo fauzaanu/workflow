@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import {Workflow, WorkflowTask} from "./types";
-import {Setting} from "obsidian";
+import {MarkdownView, Menu, Notice, Setting} from "obsidian";
+import {call_provider} from "./api_calls";
 
 /**
  * Generates a unique task name by combining a randomly generated unique ID and a randomly selected element name from the periodic table.
@@ -229,25 +230,12 @@ export function grabLastSectionByLine(entireText: string, lineNumber: number): s
  * addTaskToWorkflow(workflow, plugin);
  */
 export function addTaskToWorkflow(workflow: Workflow, plugin: any): void {
-	/**
-	 * Represents a workflow task.
-	 *
-	 * @typedef {Object} WorkflowTask
-	 * @property {string} name - The name of the task, generated using `generateUniqueName` function.
-	 * @property {string} prompt - The prompt for the task.
-	 * @property {string} systemPrompt - The system prompt for the task.
-	 * @property {Object} provider - The provider for the task, retrieved from the `plugin.settings.providers` array.
-	 * @property {number} temperature - The temperature value for the task.
-	 * @property {number} frequencyPenalty - The frequency penalty value for the task.
-	 * @property {number} maxTokens - The maximum tokens value for the task.
-	 */
 	let task: WorkflowTask = {
 		name: generateUniqueName("TSK"),
 		prompt: 'prompt_here',
 		provider: plugin.settings.providers[0],
-		temperature: 0,
-		frequencyPenalty: 2.0,
-		maxTokens: 0,
+		temperature: 'Medium',  // or 'Creative' | 'Precise'
+		maxTokens: 500,
 	};
 	workflow.tasks.push(task);
 	plugin.saveSettings().then(() => {
@@ -324,3 +312,74 @@ export function createSettingWithText(parentEl: HTMLElement, label: string, init
 		});
 }
 
+export function createSettingTemperature(parentEl: HTMLElement, label: string, initialValue: string, onChangeCallback: (value: string) => void) {
+	new Setting(parentEl)
+		.setName(label)
+		.addDropdown(dropdownInput => {
+			dropdownInput
+				.addOption('Creative', 'Creative')
+				.addOption('Medium', 'Medium')
+				.addOption('Precise', 'Precise')
+				.setValue(initialValue)
+				.onChange(async (value) => {
+					onChangeCallback(value);
+					await this.plugin.saveSettings();
+					this.plugin.settingsTab.refresh();
+				});
+		});
+}
+
+
+export function createFileMenu(fileMenu: Menu, workflows: Workflow[]) {
+	workflows.forEach((workflow: Workflow) => {
+		fileMenu.addItem(item => {
+			item.setTitle(workflow.workflowName);
+			item.setIcon(workflow.workflowIcon);
+			item.onClick(async () => {
+				const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+				if (!view) {
+					new Notice('No active note found.');
+					return;
+				}
+				await runWorkflowTasks(view, workflow.tasks, workflow.workflowName);
+			});
+		});
+	});
+	return fileMenu;
+}
+
+async function runWorkflowTasks(view: MarkdownView, workflowTasks: WorkflowTask[], workflowName: string, offset = 0) {
+	// If there's at least one task to run
+	if (workflowTasks.length > 0) {
+		// Fetch the current note and task
+		let currentNote = view.editor.getValue();
+		let currentTask = workflowTasks[0];
+
+		// Prepare the task running notice and append it
+		const taskNumber = 1 + offset;
+		const taskNotice = `\n\n> [!info] Running Workflow - ${workflowName}\n> 🤖 Running task ${taskNumber} of ${workflowTasks.length+offset} : ${currentTask.name}`;
+		view.editor.setValue(currentNote + taskNotice);
+
+		// Get the note's title and prepare the note for the bot (removing the task notice)
+		const noteTitle = view.file?.basename;
+		const botNote = `title: ${noteTitle}\n\n${currentNote.split(taskNotice).join('')}`;
+
+		// Call the provider and get the response
+		const response = await call_provider(botNote, currentTask.provider, currentTask);
+
+		// Prepare the task completion notice and append it along with the bot's response
+		currentNote = view.editor.getValue();
+		const taskCompletionNotice = `\n\n> [!done] Workflow - ${workflowName}\n> 🤖 Task ${taskNumber} : ${currentTask.name} completed.\n\n`;
+		view.editor.setValue(currentNote + '\n\n' + response + taskCompletionNotice);
+
+		// If there are more tasks, run them
+		if (workflowTasks.length > 1) {
+			await runWorkflowTasks(view, workflowTasks.slice(1), workflowName, offset+1);
+		}
+		// If no more tasks, append the workflow completion message
+		else {
+			currentNote = view.editor.getValue();
+			view.editor.setValue(currentNote + `\n\n> [!done] Workflow - ${workflowName}\n> 🤖 All Tasks completed.\n\n`);
+		}
+	}
+}
