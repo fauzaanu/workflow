@@ -70,24 +70,11 @@ export async function call_provider(
 
 	try {
 		const response: RequestUrlResponse = await requestUrl(options);
-		// convert response to string to show in Notice
-		const responseString = JSON.stringify(response.json);
-
-		// new Notice(responseString);
 		responseData = response.json; // Directly accessing the json property
 		return responseData.choices[0].message.content;
 	} catch (error) {
-		let errorMessage = 'An error occurred';
-
-		if (error.response) {
-			errorMessage += `: API responded with status code ${error.response.status} and message ${error.response.data}`;
-		} else if (error.request) {
-			// The request was made but no response was received
-			errorMessage += `: No response received from the API. Request was: ${error.request}`;
-		} else {
-			errorMessage += `: ${error.message}`;
-		}
-
+		let errorMessage = "An error occurred: " + error + "Your options:" + JSON.stringify(options) + "Your response:" + "```/n"+ JSON.stringify(responseData) + "/n```";
+		new Notice(errorMessage);
 		return errorMessage;
 	}
 }

@@ -33,7 +33,6 @@ export interface WorkflowSettings {
 	workflows: Workflow[];
 	providers: ProviderModel[];
 	apiKeys: ApiKey[];
-	display_callout_cards: boolean;
 }
 
 

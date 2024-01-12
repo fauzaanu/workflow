@@ -40,19 +40,6 @@ export class WorkflowSettingTab
 					modal.open();
 				}));
 
-
-		// setting to whether display or not to display callout cards
-		new Setting(containerEl)
-			.setName('Display Callout Cards')
-			.setDesc('Display callout cards for each workflow task.')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.display_callout_cards)
-				.onChange(async (value) => {
-					this.plugin.settings.display_callout_cards = value;
-					await this.plugin.saveSettings();
-					this.refresh();
-				}));
-
 		containerEl.createEl('h1', {text: 'LLM Models'});
 
 		let infoDiv = containerEl.createEl('div');
@@ -156,8 +143,7 @@ export const DEFAULT_SETTINGS: WorkflowSettings = {
 		{name: 'openai', model: 'gpt-3.5-turbo', apiKey: ''},
 		{name: 'openai', model: 'gpt-4', apiKey: ''},
 	],
-	apiKeys: [],
-	display_callout_cards: true,
+	apiKeys: []
 }
 
 
