@@ -357,8 +357,11 @@ async function runWorkflowTasks(view: MarkdownView, workflowTasks: WorkflowTask[
 
 		// Prepare the task running notice and append it
 		const taskNumber = 1 + offset;
-		const taskNotice = `\n\n> [!info] Running Workflow - ${workflowName}\n> 🤖 Running task ${taskNumber} of ${workflowTasks.length+offset} : ${currentTask.name}`;
-		view.editor.setValue(currentNote + taskNotice);
+		const taskNotice = `\n\n> [!info] Running Workflow - ${workflowName}\n> 🤖 Running task ${taskNumber} of ${workflowTasks.length + offset} : ${currentTask.name}`;
+		// if the settings > display_callout_cards is true, then add the task notice as a card
+		if (this.plugin.settings.display_callout_cards) {
+			view.editor.setValue(currentNote + taskNotice);
+		}
 
 		// Get the note's title and prepare the note for the bot (removing the task notice)
 		const noteTitle = view.file?.basename;
@@ -370,16 +373,22 @@ async function runWorkflowTasks(view: MarkdownView, workflowTasks: WorkflowTask[
 		// Prepare the task completion notice and append it along with the bot's response
 		currentNote = view.editor.getValue();
 		const taskCompletionNotice = `\n\n> [!done] Workflow - ${workflowName}\n> 🤖 Task ${taskNumber} : ${currentTask.name} completed.\n\n`;
-		view.editor.setValue(currentNote + '\n\n' + response + taskCompletionNotice);
+		if (this.plugin.settings.display_callout_cards) {
+			view.editor.setValue(currentNote + '\n\n' + response + taskCompletionNotice);
+		} else {
+			view.editor.setValue(currentNote + '\n\n' + response);
+		}
 
 		// If there are more tasks, run them
 		if (workflowTasks.length > 1) {
-			await runWorkflowTasks(view, workflowTasks.slice(1), workflowName, offset+1);
+			await runWorkflowTasks(view, workflowTasks.slice(1), workflowName, offset + 1);
 		}
 		// If no more tasks, append the workflow completion message
 		else {
 			currentNote = view.editor.getValue();
-			view.editor.setValue(currentNote + `\n\n> [!done] Workflow - ${workflowName}\n> 🤖 All Tasks completed.\n\n`);
+			if (this.plugin.settings.display_callout_cards) {
+				view.editor.setValue(currentNote + `\n\n> [!done] Workflow - ${workflowName}\n> 🤖 All Tasks completed.\n\n`);
+			}
 		}
 	}
 }

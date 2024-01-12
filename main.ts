@@ -14,7 +14,6 @@ import {
 	generateRandomIcon,
 	generateUniqueName,
 	grabLastSectionByLine, ignoreBotLines,
-	removeEmptyLines,
 	removeEmptyLinesfromStart
 } from "./src/helpers";
 import {call_provider} from "./src/api_calls";
