@@ -8,15 +8,10 @@ import {
 	PluginSettingTab,
 	Setting
 } from 'obsidian';
-import {ProviderModel, WorkflowTask, Workflow, WorkflowSettings} from './src/types';
+import {WorkflowSettings} from './src/types';
 import {
 	createFileMenu,
-	generateRandomIcon,
-	generateUniqueName,
-	grabLastSectionByLine, ignoreBotLines,
-	removeEmptyLinesfromStart
 } from "./src/helpers";
-import {call_provider} from "./src/api_calls";
 import {DEFAULT_SETTINGS, WorkflowSettingTab} from "./src/settings";
 
 /**
@@ -82,25 +77,23 @@ export default class WorkflowPlugin
 		});
 
 
-
 		// create a ribbon icon and add a menu item to the ribbon icon per workflow
 		this.addRibbonIcon('book', 'Run Workflow', (evt: MouseEvent) => {
-// create a file menu on the ribbon icon
-				const fileMenu = createFileMenu(new Menu(), this.settings.workflows);
-// add the file menu to the ribbon icon
+				// create a file menu on the ribbon icon
+				const fileMenu = createFileMenu(new Menu(), workflows, this.settings);
+				// add the file menu to the ribbon icon
 				fileMenu.showAtPosition(currentMousePosition);
 
 			}
 		);
 
 
-
 		this.addCommand({
 			id: 'show-file-menu',
 			name: 'Show File Menu',
 			callback: () => {
-				const fileMenu = createFileMenu(new Menu(), this.settings.workflows);
-// show at the previously recorded mouse position
+				const fileMenu = createFileMenu(new Menu(), this.settings.workflows, this.settings);
+				// show at the previously recorded mouse position
 				fileMenu.showAtPosition(currentMousePosition);
 			}
 		});

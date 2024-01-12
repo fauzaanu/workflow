@@ -29,6 +29,8 @@ export class WorkflowSettingTab
 		// this.plugin.settings will give you access to your plugin's settings
 		containerEl.empty(); // Clear the settings container
 
+
+
 		containerEl.createEl('h1', {text: 'Set API Keys'});
 		// button to edit / view providers
 		new Setting(containerEl)
@@ -143,7 +145,7 @@ export const DEFAULT_SETTINGS: WorkflowSettings = {
 		{name: 'openai', model: 'gpt-3.5-turbo', apiKey: ''},
 		{name: 'openai', model: 'gpt-4', apiKey: ''},
 	],
-	apiKeys: []
+	apiKeys: [],
 }
 
 

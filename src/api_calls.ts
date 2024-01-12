@@ -69,11 +69,13 @@ export async function call_provider(
 	let responseData: any = {};
 
 	try {
+		new Notice("Making request to " + provider.model)
 		const response: RequestUrlResponse = await requestUrl(options);
 		responseData = response.json; // Directly accessing the json property
+		new Notice("Response code: " + response.status);
 		return responseData.choices[0].message.content;
 	} catch (error) {
-		let errorMessage = "An error occurred: " + error + "Your options:" + JSON.stringify(options) + "Your response:" + "```/n"+ JSON.stringify(responseData) + "/n```";
+		let errorMessage = "An error occurred: " + error + "Your options:" + JSON.stringify(options) + "Your response:" + "```/n" + JSON.stringify(responseData) + "/n```";
 		new Notice(errorMessage);
 		return errorMessage;
 	}

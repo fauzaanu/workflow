@@ -1,5 +1,5 @@
 import * as fs from "fs";
-import {Workflow, WorkflowTask} from "./types";
+import {Workflow, WorkflowSettings, WorkflowTask} from "./types";
 import {MarkdownView, Menu, Notice, Setting} from "obsidian";
 import {call_provider} from "./api_calls";
 
@@ -330,7 +330,7 @@ export function createSettingTemperature(parentEl: HTMLElement, label: string, i
 }
 
 
-export function createFileMenu(fileMenu: Menu, workflows: Workflow[]) {
+export function createFileMenu(fileMenu: Menu, workflows: Workflow[], settings: WorkflowSettings) {
 	workflows.forEach((workflow: Workflow) => {
 		fileMenu.addItem(item => {
 			item.setTitle(workflow.workflowName);
@@ -341,15 +341,14 @@ export function createFileMenu(fileMenu: Menu, workflows: Workflow[]) {
 					new Notice('No active note found.');
 					return;
 				}
-				await runWorkflowTasks(view, workflow.tasks, workflow.workflowName);
+				await runWorkflowTasks(view, workflow.tasks, workflow.workflowName, settings);
 			});
 		});
 	});
 	return fileMenu;
 }
 
-async function runWorkflowTasks(view: MarkdownView, workflowTasks: WorkflowTask[], workflowName: string, offset = 0) {
-	// If there's at least one task to run
+async function runWorkflowTasks(view: MarkdownView, workflowTasks: WorkflowTask[], workflowName: string, settings: WorkflowSettings, offset = 0) {
 	if (workflowTasks.length > 0) {
 		// Fetch the current note and task
 		let currentNote = view.editor.getValue();
@@ -357,38 +356,32 @@ async function runWorkflowTasks(view: MarkdownView, workflowTasks: WorkflowTask[
 
 		// Prepare the task running notice and append it
 		const taskNumber = 1 + offset;
-		const taskNotice = `\n\n> [!info] Running Workflow - ${workflowName}\n> 🤖 Running task ${taskNumber} of ${workflowTasks.length + offset} : ${currentTask.name}`;
-		// if the settings > display_callout_cards is true, then add the task notice as a card
-		if (this.plugin.settings.display_callout_cards) {
-			view.editor.setValue(currentNote + taskNotice);
-		}
 
-		// Get the note's title and prepare the note for the bot (removing the task notice)
+		// Get the note's title and prepare the note for the bot
 		const noteTitle = view.file?.basename;
-		const botNote = `title: ${noteTitle}\n\n${currentNote.split(taskNotice).join('')}`;
+		const botNote = `title: ${noteTitle}\n\n${view.editor.getValue()}`;
 
 		// Call the provider and get the response
 		const response = await call_provider(botNote, currentTask.provider, currentTask);
 
-		// Prepare the task completion notice and append it along with the bot's response
-		currentNote = view.editor.getValue();
-		const taskCompletionNotice = `\n\n> [!done] Workflow - ${workflowName}\n> 🤖 Task ${taskNumber} : ${currentTask.name} completed.\n\n`;
-		if (this.plugin.settings.display_callout_cards) {
-			view.editor.setValue(currentNote + '\n\n' + response + taskCompletionNotice);
-		} else {
-			view.editor.setValue(currentNote + '\n\n' + response);
+		let better_response = response;
+		// if the first heading of the bot is same as the note title, remove it
+		// the first heading is the first line of the response with # in the beginning
+		if (response.startsWith('# ' + noteTitle)) {
+			better_response = response.replace('# ' + noteTitle, '');
+			new Notice(`Heading was cleaned as it was same as the note title.`);
 		}
+
+
+		// Append the bot's response
+		currentNote += '\n\n' + better_response;
+
+		// Set the note value
+		view.editor.setValue(currentNote);
 
 		// If there are more tasks, run them
 		if (workflowTasks.length > 1) {
-			await runWorkflowTasks(view, workflowTasks.slice(1), workflowName, offset + 1);
-		}
-		// If no more tasks, append the workflow completion message
-		else {
-			currentNote = view.editor.getValue();
-			if (this.plugin.settings.display_callout_cards) {
-				view.editor.setValue(currentNote + `\n\n> [!done] Workflow - ${workflowName}\n> 🤖 All Tasks completed.\n\n`);
-			}
+			await runWorkflowTasks(view, workflowTasks.slice(1), workflowName, settings, offset + 1);
 		}
 	}
 }

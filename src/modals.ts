@@ -1,8 +1,8 @@
-import {App, Modal, Notice, Setting} from "obsidian";
-import {ApiKey, ProviderModel, ProviderName, Temperature, Workflow, WorkflowTask} from "./types";
+import {App, Modal, Setting} from "obsidian";
+import {ApiKey, ProviderName, Temperature, Workflow, WorkflowTask} from "./types";
 import WorkflowPlugin from "../main";
 import {
-	addTaskToWorkflow, createSettingTemperature,
+	createSettingTemperature,
 	createSettingWithButton,
 	createSettingWithText,
 	createSettingWithTextArea,
