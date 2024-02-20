@@ -31,7 +31,7 @@ export class WorkflowSettingTab
 
 
 
-		containerEl.createEl('h1', {text: 'Set API keys'});
+		new Setting(containerEl).setName('Set API keys').setHeading();
 		// button to edit / view providers
 		new Setting(containerEl)
 			.setName('Add API keys')
@@ -42,8 +42,7 @@ export class WorkflowSettingTab
 					modal.open();
 				}));
 
-		containerEl.createEl('h1', {text: 'LLM models'});
-
+		new Setting(containerEl).setName('LLM models').setHeading();
 		let infoDiv = containerEl.createEl('div');
 		infoDiv.createEl('p', {text: `Once you have added your API keys, you can use the specific models below`});
 
@@ -57,7 +56,7 @@ export class WorkflowSettingTab
 		}
 
 
-		containerEl.createEl('h1', {text: 'Workflows'});
+		new Setting(containerEl).setName('Workflows').setHeading();
 		// button to add a new workflow
 		new Setting(containerEl)
 			.setName('Add Workflow')
