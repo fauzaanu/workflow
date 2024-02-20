@@ -29,8 +29,6 @@ export class WorkflowSettingTab
 		// this.plugin.settings will give you access to your plugin's settings
 		containerEl.empty(); // Clear the settings container
 
-
-
 		new Setting(containerEl).setName('Set API keys').setHeading();
 		// button to edit / view providers
 		new Setting(containerEl)

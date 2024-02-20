@@ -245,7 +245,7 @@ export class TaskModal extends Modal {
 					providerOptions[provider.model] = provider.model;
 				});
 				dropdown.addOptions(providerOptions)
-				dropdown.setValue(this.task.provider.model) // Use provider name as the value since our options keys are provider names
+				dropdown.setValue(this.task.provider.model)
 					.onChange(async value => {
 						const selectedProvider = this.plugin.settings.providers.find(provider => provider.model === value);
 						if (selectedProvider) { // Check if provider was found
@@ -267,7 +267,6 @@ export class TaskModal extends Modal {
 
 		// delete button
 		createSettingWithButton(contentEl, `Delete task`, 'Delete task', () => {
-			// remove the task from the workflow
 			this.workflow.tasks = this.workflow.tasks.filter(t => t.name !== this.task.name);
 			// Save settings
 			this.plugin.saveSettings().then(() => {

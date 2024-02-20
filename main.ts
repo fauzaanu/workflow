@@ -50,22 +50,6 @@ export default class WorkflowPlugin
 
 		const workflows = this.settings.workflows;
 
-		// Get all .workflow files in the vault
-		const workflowFiles = this.app.vault.getFiles().filter(file => file.extension === 'workflow');
-
-		// For each .workflow file, load and parse its JSON content, then process it
-		for (const workflowFile of workflowFiles) {
-			try {
-				const fileContent = await this.app.vault.read(workflowFile);
-				const parsedContent = JSON.parse(fileContent);
-
-				// Here: Add parsedContent to your list of workflows. Make sure that
-				// parsedContent is indeed a valid workflow object by checking its structure.
-			} catch (e) {
-				console.log(`Failed to load or parse .workflow file: ${workflowFile.basename}`, e);
-			}
-		}
-
 		// add the workflow settings tab
 		this.settingsTab = new WorkflowSettingTab(this.app, this);
 		this.addSettingTab(this.settingsTab);
@@ -97,17 +81,11 @@ export default class WorkflowPlugin
 				fileMenu.showAtPosition(currentMousePosition);
 			}
 		});
-
-
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
 	}
 
 	onunload() {
 		// save the settings
-		this.saveSettings().then(r => {
-			console.log("Settings saved successfully.");
-		});
+		this.saveSettings();
 	}
 
 	async loadSettings() {
