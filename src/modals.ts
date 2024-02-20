@@ -96,11 +96,6 @@ export class WorkflowModal extends Modal {
 		let {contentEl} = this;
 		contentEl.empty();
 	}
-
-	refreshModal() {
-		this.close();
-		this.open();
-	}
 }
 
 

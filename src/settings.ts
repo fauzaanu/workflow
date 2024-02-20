@@ -25,8 +25,6 @@ export class WorkflowSettingTab
 
 	display(): void {
 		const {containerEl} = this;
-		// Here you can add your dynamic content as explained in the previous response
-		// this.plugin.settings will give you access to your plugin's settings
 		containerEl.empty(); // Clear the settings container
 
 		new Setting(containerEl).setName('Set API keys').setHeading();
@@ -90,7 +88,7 @@ export class WorkflowSettingTab
 
 			new Setting(workflowDiv)
 				.addButton(button => button
-					.setButtonText('Edit / View workflow')
+					.setButtonText('Edit / view workflow')
 					.onClick(() => {
 						let modal = new WorkflowModal(this.app, workflow, this.plugin);
 						modal.open();
