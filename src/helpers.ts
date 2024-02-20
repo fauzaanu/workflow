@@ -372,6 +372,11 @@ async function runWorkflowTasks(view: MarkdownView, workflowTasks: WorkflowTask[
 			new Notice(`Heading was cleaned as it was same as the note title.`);
 		}
 
+		if (response.startsWith('## ' + noteTitle)) {
+			better_response = response.replace('## ' + noteTitle, '');
+			new Notice(`Heading was cleaned as it was same as the note title.`);
+		}
+
 
 		// Append the bot's response
 		currentNote += '\n\n' + better_response;
