@@ -1,4 +1,3 @@
-import * as fs from "fs";
 import {Workflow, WorkflowSettings, WorkflowTask} from "./types";
 import {MarkdownView, Menu, Notice, Setting} from "obsidian";
 import {call_provider} from "./api_calls";
@@ -136,24 +135,6 @@ export function generateRandomIcon() {
 	]
 	const randomIcon = Math.floor(Math.random() * 8);
 	return icons[randomIcon];
-}
-
-/**
- * Saves the settings to the settings.json file.
- *
- * @param {any} settings - The settings to save.
- * @return {void}
- */
-export function saveSettingsToFile(settings: any) {
-	try {
-		// Convert the settings object to a JSON string
-		const settingsJson = JSON.stringify(settings, null, 2);
-		// Write the JSON string to a file synchronously
-		fs.writeFileSync('settings.json', settingsJson);
-		console.log("Settings saved successfully.");
-	} catch (e) {
-		console.error("Failed to save settings: ", e);
-	}
 }
 
 
