@@ -31,21 +31,21 @@ export class WorkflowSettingTab
 
 
 
-		containerEl.createEl('h1', {text: 'Set API Keys'});
+		containerEl.createEl('h1', {text: 'Set API keys'});
 		// button to edit / view providers
 		new Setting(containerEl)
-			.setName('Add API Keys')
+			.setName('Add API keys')
 			.addButton(button => button
-				.setButtonText('Edit')
+				.setButtonText('edit')
 				.onClick(() => {
 					let modal = new ApiKeysModal(this.app, this.plugin);
 					modal.open();
 				}));
 
-		containerEl.createEl('h1', {text: 'LLM Models'});
+		containerEl.createEl('h1', {text: 'LLM models'});
 
 		let infoDiv = containerEl.createEl('div');
-		infoDiv.createEl('p', {text: `Once you have added your API keys, you can use the specefic models below`});
+		infoDiv.createEl('p', {text: `Once you have added your API keys, you can use the specific models below`});
 
 		let providersDiv = containerEl.createEl('div');
 		let amountOfProviders = this.plugin.settings.providers.length;
@@ -93,7 +93,7 @@ export class WorkflowSettingTab
 
 			new Setting(workflowDiv)
 				.addButton(button => button
-					.setButtonText('Edit / View Workflow')
+					.setButtonText('Edit / View workflow')
 					.onClick(() => {
 						let modal = new WorkflowModal(this.app, workflow, this.plugin);
 						modal.open();
@@ -102,7 +102,7 @@ export class WorkflowSettingTab
 						});
 					}))
 				.addButton(button => button
-					.setButtonText('Delete Workflow')
+					.setButtonText('Delete workflow')
 					.setWarning()
 					.setIcon('trash')
 					.onClick(() => {

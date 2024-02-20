@@ -206,9 +206,9 @@ export class TaskModal extends Modal {
 	onOpen() {
 		let {contentEl} = this;
 		// Set the title of the Modal to the task name
-		contentEl.createEl('h2', {text: `Edit Task: ${this.task.name}`});
+		contentEl.createEl('h2', {text: `Edit task: ${this.task.name}`});
 
-		createSettingWithTextArea(contentEl, 'Task Name', this.task.name, (value: string) => {
+		createSettingWithTextArea(contentEl, 'Task name', this.task.name, (value: string) => {
 			this.task.name = value;
 		});
 
@@ -222,7 +222,7 @@ export class TaskModal extends Modal {
 		});
 
 		// max tokens
-		createSettingWithText(contentEl, 'Max Tokens', this.task.maxTokens.toString(), (value: number) => {
+		createSettingWithText(contentEl, 'Max tokens', this.task.maxTokens.toString(), (value: number) => {
 			this.task.maxTokens = Number(value);
 			this.plugin.saveSettings().then(() => {
 				this.close();
@@ -255,7 +255,7 @@ export class TaskModal extends Modal {
 			});
 
 		// save button
-		createSettingWithButton(contentEl, `Save Task`, 'Save Task', () => {
+		createSettingWithButton(contentEl, `Save task`, 'Save task', () => {
 			if (this.isNewTask) {
 				this.workflow.tasks.push(this.task);
 			}
@@ -266,7 +266,7 @@ export class TaskModal extends Modal {
 		});
 
 		// delete button
-		createSettingWithButton(contentEl, `Delete Task`, 'Delete Task', () => {
+		createSettingWithButton(contentEl, `Delete task`, 'Delete task', () => {
 			// remove the task from the workflow
 			this.workflow.tasks = this.workflow.tasks.filter(t => t.name !== this.task.name);
 			// Save settings
