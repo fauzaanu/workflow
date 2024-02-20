@@ -1,12 +1,6 @@
 import {
-	App,
-	MarkdownView,
 	Menu,
-	Modal,
-	Notice,
-	Plugin,
-	PluginSettingTab,
-	Setting
+	Plugin
 } from 'obsidian';
 import {WorkflowSettings} from './src/types';
 import {
@@ -60,7 +54,6 @@ export default class WorkflowPlugin
 			currentMousePosition.y = event.clientY;
 		});
 
-
 		// create a ribbon icon and add a menu item to the ribbon icon per workflow
 		this.addRibbonIcon('book', 'Run Workflow', (evt: MouseEvent) => {
 				// create a file menu on the ribbon icon
@@ -70,7 +63,6 @@ export default class WorkflowPlugin
 
 			}
 		);
-
 
 		this.addCommand({
 			id: 'show-file-menu',

@@ -1,5 +1,5 @@
 import {Notice, requestUrl, RequestUrlParam, RequestUrlResponse} from "obsidian";
-import {ProviderModel, Workflow, WorkflowTask} from "./types";
+import {ProviderModel, WorkflowTask} from "./types";
 
 /**
  * Makes a request to a provider using the given messages and provider information.
