@@ -32,7 +32,7 @@ export class WorkflowModal extends Modal {
 		contentEl.createEl('h1', {text: `Workflow: ${this.workflow.workflowName}`});
 
 		// edit workflow name
-		createSettingWithTextArea(contentEl, 'Workflow Name', this.workflow.workflowName, (value: string) => {
+		createSettingWithTextArea(contentEl, 'Workflow name', this.workflow.workflowName, (value: string) => {
 			this.workflow.workflowName = value;
 			this.plugin.saveSettings().then(() => {
 				this.close();
@@ -51,13 +51,13 @@ export class WorkflowModal extends Modal {
         `;
 
 			// edit button
-			let editButton = taskEl.createEl('button', {text: 'Edit this Task'});
+			let editButton = taskEl.createEl('button', {text: 'Edit this task'});
 			editButton.addEventListener('click', () => {
 				new TaskModal(this.app, task, this.workflow, this, this.plugin, false).open();
 			});
 
 			// delete button
-			let deleteButton = taskEl.createEl('button', {text: 'Delete this Task'});
+			let deleteButton = taskEl.createEl('button', {text: 'Delete this task'});
 			deleteButton.addEventListener('click', () => {
 				this.workflow.tasks = this.workflow.tasks.filter(t => t.name !== task.name);
 				this.plugin.saveSettings().then(() => {
@@ -68,7 +68,7 @@ export class WorkflowModal extends Modal {
 		});
 
 		// add task button
-		let addTaskButton = contentEl.createEl('button', {text: 'Add Task'});
+		let addTaskButton = contentEl.createEl('button', {text: 'Add task'});
 		addTaskButton.addEventListener('click', () => {
 			new TaskModal(this.app, {
 				name: generateUniqueName("TSK"),
