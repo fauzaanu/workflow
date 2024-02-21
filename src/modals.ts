@@ -42,13 +42,11 @@ export class WorkflowModal extends Modal {
 
 		this.workflow.tasks.forEach((task) => {
 			let taskEl = contentEl.createEl('div');
-			taskEl.innerHTML = `
-            <h2>${task.name}</h2>
-            <p>${task.prompt}</p>
-            <p>Provider: ${task.provider.name}</p>
-            <p>Temperature: ${task.temperature}</p>
-            <p>Max Tokens: ${task.maxTokens}</p>
-        `;
+			taskEl.createEl('h2', {text: task.name});
+			taskEl.createEl('p', {text: task.prompt});
+			taskEl.createEl('p', {text: `Provider: ${task.provider.model}`});
+			taskEl.createEl('p', {text: `Temperature: ${task.temperature}`});
+			taskEl.createEl('p', {text: `Max Tokens: ${task.maxTokens}`});
 
 			// edit button
 			let editButton = taskEl.createEl('button', {text: 'Edit this task'});
